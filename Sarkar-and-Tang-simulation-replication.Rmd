@@ -68,6 +68,10 @@ decompose <- function(X, randomize) {
 3+3
 ```
 
+```{r}
+5+5
+```
+
 
 
 
