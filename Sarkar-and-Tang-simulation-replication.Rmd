@@ -1,0 +1,74 @@
+---
+title: "Sarkar and Tang simulation replication"
+author: "Ethan Naegele"
+date: "2024-04-19"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+X <- matrix(c(1, 2, 3, 1, 2, 3), nrow = 2, byrow = TRUE)
+X
+X.svd <- svd(X)
+X.svd
+```
+
+
+# Internal functions in knockoffs package for computation purposes
+
+```{r}
+# Reduced SVD with canonical sign choice.
+# 
+# Our convention is that the sign of each vector in U is chosen such that the
+# coefficient with the largest absolute value is positive.
+canonical_svd = function(X) {
+  X.svd = tryCatch({
+    svd(X)
+  }, warning = function(w){}, error = function(e) {
+      stop("SVD failed in the creation of fixed-design knockoffs. Try upgrading R to version >= 3.3.0")
+  }, finally = {})
+  
+  for (j in 1:min(dim(X))) {
+    i = which.max(abs(X.svd$u[,j]))
+    if (X.svd$u[i,j] < 0) {
+      X.svd$u[,j] = -X.svd$u[,j]
+      X.svd$v[,j] = -X.svd$v[,j]
+  }
+    }
+  return(X.svd)
+}
+
+```
+
+
+```{r}
+#' Compute the SVD of X and construct an orthogonal matrix U_perp such that U_perp * U = 0.
+#'  
+decompose <- function(X, randomize) {
+  n = nrow(X); p = ncol(X)
+  stopifnot(n >= 2*p)
+  
+  result = canonical_svd(X)
+  Q = qr.Q(qr(cbind(result$u, matrix(0,n,p))))
+  u_perp = Q[,(p+1):(2*p)]
+  if (randomize) {
+      Q = qr.Q(qr(rnorm_matrix(p,p)))
+      u_perp = u_perp %*% Q
+  }
+  result$u_perp = u_perp
+  result
+}
+```
+
+```{r}
+3+3
+```
+
+
+
+
+
