@@ -1,0 +1,11 @@
+---
+title: "Sarkar and Tang simulation replication"
+author: "Ethan Naegele"
+date: "2024-04-19"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
