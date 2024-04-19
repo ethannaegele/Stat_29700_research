@@ -90,6 +90,8 @@ create_equicorrelated_knockoffs <- function(X, randomize=FALSE){
 }
 ```
 
+# Functions specific to quantities from Sarkar and Tang
+
 ```{r}
 # faster function for calculating norm of vector
 norm_vec <- function(x) sqrt(sum(x^2))
@@ -98,7 +100,7 @@ norm_vec <- function(x) sqrt(sum(x^2))
 get_variance_parameter_estimate <- function(X, Y){
   n <- nrow(X)
   d <- ncol(X)
-  tau_hat_squared <- (norm_vec(Y - X %*% solve(t(X) %*% X) %*% t(X) %*% Y))^2 / (n - d)
+  tau_hat_squared <- (norm_vec(Y - X %*% solve(t(X) %*% X) %*% t(X) %*% Y))^2 / (n - d) # numerator is RSS, and assuming n > d
   return(sqrt(tau_hat_squared))
 }
 ```
@@ -106,21 +108,37 @@ get_variance_parameter_estimate <- function(X, Y){
 
 
 ```{r}
-# get the beta hat 1 estimate provided at the beginning of section 2
-get_beta_hat_1 <- function(X, Y){
+# get the T_1  estimate provided at the beginning of section 2
+library(expm)
+get_T_1 <- function(X, Y){
   sigma <- solve(t(X) %*% X)
   D <- create_equicorrelated_D(X)
   X_ko <- create_equicorrelated_knockoffs(X)
   beta_hat_1 <- solve(2 * sigma - D) %*% t(X + t(X)) %*% Y
-  return(beta_hat_1)
+  # tau hat estimated with the columnwise concatenation of X and knockoff X
+  T_1 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) * 
+    solve(sqrtm(solve(diag(diag(2 * sigma - D))))) # unsure about interpretation of diag operator in the equation for T1 from the paper; this is my best interpretation of it
 }
 
-get_beta_hat_2 <- function(X, Y){
+# get the T_2 estimate 
+get_T_2 <- function(X, Y){
   beta_hat_2 <- solve(D) %*% t(X - t(X_ko)) %*% Y
-  return(beta_hat_2)
+  D <- create_equicorrelated_D(X)
+  X_ko <- create_equicorrelated_knockoffs(X)
+  T_2 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) * sqrtm(D) * beta_hat_2
 }
 
 ```
+
+```{r}
+mat <- matrix(c(1, 2, 3, 4), nrow = 2, byrow = TRUE)
+diag_of_mat <- diag(mat)
+diag(diag_of_mat)
+diag(diag(mat))
+```
+
+
+
 
 
 
