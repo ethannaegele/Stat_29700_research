@@ -90,7 +90,37 @@ create_equicorrelated_knockoffs <- function(X, randomize=FALSE){
 }
 ```
 
+```{r}
+# faster function for calculating norm of vector
+norm_vec <- function(x) sqrt(sum(x^2))
 
+# obtain the unbiased estimator of the variance parameter tau in the regression setting Y = N(X * beta, tau^2 I_n)
+get_variance_parameter_estimate <- function(X, Y){
+  n <- nrow(X)
+  d <- ncol(X)
+  tau_hat_squared <- (norm_vec(Y - X %*% solve(t(X) %*% X) %*% t(X) %*% Y))^2 / (n - d)
+  return(sqrt(tau_hat_squared))
+}
+```
+
+
+
+```{r}
+# get the beta hat 1 estimate provided at the beginning of section 2
+get_beta_hat_1 <- function(X, Y){
+  sigma <- solve(t(X) %*% X)
+  D <- create_equicorrelated_D(X)
+  X_ko <- create_equicorrelated_knockoffs(X)
+  beta_hat_1 <- solve(2 * sigma - D) %*% t(X + t(X)) %*% Y
+  return(beta_hat_1)
+}
+
+get_beta_hat_2 <- function(X, Y){
+  beta_hat_2 <- solve(D) %*% t(X - t(X_ko)) %*% Y
+  return(beta_hat_2)
+}
+
+```
 
 
 
