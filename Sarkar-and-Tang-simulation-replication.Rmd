@@ -116,7 +116,7 @@ get_T_1 <- function(X, Y){
   X_ko <- create_equicorrelated_knockoffs(X)
   beta_hat_1 <- solve(2 * sigma - D) %*% t(X + t(X)) %*% Y
   # tau hat estimated with the columnwise concatenation of X and knockoff X
-  T_1 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) * 
+  T_1 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) %*%
     solve(sqrtm(solve(diag(diag(2 * sigma - D))))) # unsure about interpretation of diag operator in the equation for T1 from the paper; this is my best interpretation of it
 }
 
@@ -125,7 +125,7 @@ get_T_2 <- function(X, Y){
   beta_hat_2 <- solve(D) %*% t(X - t(X_ko)) %*% Y
   D <- create_equicorrelated_D(X)
   X_ko <- create_equicorrelated_knockoffs(X)
-  T_2 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) * sqrtm(D) * beta_hat_2
+  T_2 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) * sqrtm(D) %*% beta_hat_2
 }
 
 ```
