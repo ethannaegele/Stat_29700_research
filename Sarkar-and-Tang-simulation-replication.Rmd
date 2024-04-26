@@ -116,8 +116,8 @@ get_T_1 <- function(X, Y){
   X_ko <- create_equicorrelated_knockoffs(X)
   beta_hat_1 <- solve(2 * sigma - D) %*% t(X + t(X)) %*% Y
   # tau hat estimated with the columnwise concatenation of X and knockoff X
-  T_1 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) %*%
-    solve(sqrtm(solve(diag(diag(2 * sigma - D))))) # unsure about interpretation of diag operator in the equation for T1 from the paper; this is my best interpretation of it
+  T_1 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) *
+    solve(sqrtm(solve(diag(diag(2 * sigma - D))))) %*% beta_hat_1 # unsure about interpretation of diag operator in the equation for T1 from the paper; this is my best interpretation of it - Ignat agrees
 }
 
 # get the T_2 estimate 
@@ -130,11 +130,110 @@ get_T_2 <- function(X, Y){
 
 ```
 
+
 ```{r}
-mat <- matrix(c(1, 2, 3, 4), nrow = 2, byrow = TRUE)
-diag_of_mat <- diag(mat)
-diag(diag_of_mat)
-diag(diag(mat))
+set.seed(12)
+n <- 100  # Number of rows
+d <- 10   # Number of columns
+rho <- 0.5  # AR(1) coefficient
+
+# Create the correlation matrix based on AR(1) structure
+cor_matrix <- matrix(nrow = d, ncol = d)
+for (i in 1:d) {
+  for (j in 1:d) {
+    cor_matrix[i, j] <- rho^abs(i - j)
+  }
+}
+
+# Perform Cholesky decomposition of the correlation matrix
+cholesky_factor <- chol(cor_matrix)
+
+# Generate independent standard normal variables
+random_normals <- matrix(rnorm(n * d), nrow = n, ncol = d)
+
+# Transform the independent normals using the Cholesky factor to get correlated normals
+correlated_normals <- random_normals %*% cholesky_factor
+
+# The 'correlated_normals' matrix now has the desired properties
+print(correlated_normals)
+
+```
+
+```{r}
+set.seed(12)
+num_iterations <- 500
+n <- 100  # Number of rows
+d <- 10   # Number of columns
+a <- 2 # signal strength
+num_true_signals <- ceiling(.1 * d)
+rho <- 0.5  # AR(1) coefficient
+for (m in num_iterations){
+  cor_matrix <- matrix(nrow = d, ncol = d)
+for (i in 1:d) {
+  for (j in 1:d) {
+    cor_matrix[i, j] <- rho^abs(i - j)
+  }
+}
+
+# Perform Cholesky decomposition of the correlation matrix
+cholesky_factor <- chol(cor_matrix)
+
+# Generate independent standard normal variables
+random_normals <- matrix(rnorm(n * d), nrow = n, ncol = d)
+
+# Transform the independent normals using the Cholesky factor to get correlated normals
+X <- random_normals %*% cholesky_factor
+
+nonzero_indices <- sample(d, num_true_signals) # randomly sample some indices to be the true signal indices
+
+beta_true <- a * (1:d %in% nonzero_indices) # all the other positions in the vector will be 0
+
+Y <- X %*% beta_true + rnorm(n)
+
+
+
+}
+```
+
+
+
+```{r}
+get_regression_model <- function(n, d, a, num_true_signals, random_true_signal_indices = FALSE){
+  # random_true_signal_indices selects which indices will be true signals randomly
+  # n = sample size, ie number of rows in the matrix
+  # d = number of features
+  # a = signal strength
+  # num_true_signals = number of nonzero beta coefficients
+  # Returns an X matrix, response Y, and the positions of the true signals, as according to the simulation setup described in the beginning of Section 3 of Sarkar and Tang
+  
+   cor_matrix <- matrix(nrow = d, ncol = d)
+for (i in 1:d) {
+  for (j in 1:d) {
+    cor_matrix[i, j] <- rho^abs(i - j)
+  }
+}
+
+# Perform Cholesky decomposition of the correlation matrix
+cholesky_factor <- chol(cor_matrix)
+
+# Generate independent standard normal variables
+random_normals <- matrix(rnorm(n * d), nrow = n, ncol = d)
+
+# Transform the independent normals using the Cholesky factor to get correlated normals
+X <- random_normals %*% cholesky_factor
+
+nonzero_indices <- sample(d, num_true_signals) # randomly sample some indices to be the true signal indices
+
+if (random_true_signal_indices)
+  beta_true <- a * (1:d %in% nonzero_indices) # all the other positions in the vector will be 0
+else{
+  beta_true <- c(rep(a, times = num_true_signals), rep(0, times = d - num_true_signals))
+}
+
+Y <- X %*% beta_true + rnorm(n) # linear regression model
+
+return(list(X, Y, nonzero_indices))
+}
 ```
 
 
