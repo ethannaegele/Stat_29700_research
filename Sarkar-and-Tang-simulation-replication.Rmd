@@ -222,22 +222,52 @@ random_normals <- matrix(rnorm(n * d), nrow = n, ncol = d)
 # Transform the independent normals using the Cholesky factor to get correlated normals
 X <- random_normals %*% cholesky_factor
 
-nonzero_indices <- sample(d, num_true_signals) # randomly sample some indices to be the true signal indices
 
-if (random_true_signal_indices)
+
+if (random_true_signal_indices){
+  nonzero_indices <- sample(d, num_true_signals) # randomly sample some indices to be the true signal indices
   beta_true <- a * (1:d %in% nonzero_indices) # all the other positions in the vector will be 0
+}
 else{
+  nonzero_indices <- 1:num_true_signals
   beta_true <- c(rep(a, times = num_true_signals), rep(0, times = d - num_true_signals))
 }
 
 Y <- X %*% beta_true + rnorm(n) # linear regression model
 
-return(list(X, Y, nonzero_indices))
+return(list('X' = X, 'Y' = Y, 'nonzero_indices' = nonzero_indices))
 }
 ```
 
 
+```{r}
+get_regression_model(n = 100, d = 10, a = 2, num_true_signals = 1)
+```
 
+
+```{r}
+sarkar_tang_method1 <- function(X, Y, alpha){
+  d <- ncol(X)
+  nu <- nrow(X) - 2 * d # n - 2d assuming n > 2d
+  T1 <- get_T_1(X, Y)
+  T2 <- get_T_2(X, Y)
+  P_t1 <- pf(T1^2, 1, nu, lower.tail = FALSE) # to calculate probabilities with the t^2_n distribution, have to use the F(1, n) distribution
+  P_t2 <- pf(T2^2, 1, nu, lower.tail = FALSE)
+  P_tilde <- numeric(d)
+  for (j in 1:d){
+    if (P_t1[j] > sqrt(alpha)){
+      P_tilde[j] <- 1
+    }
+    else{
+      P_tilde[j] <- P_t2[j]
+    }
+  }
+  P_tilde_BH <- p.adjust(P_tilde, method = "BH")
+  rejected_indices <- which(P_tilde_BH < sqrt(alpha))
+  return(rejected_indices) # the indices of the features that the test concludes are nonzero
+  
+}
+```
 
 
 
