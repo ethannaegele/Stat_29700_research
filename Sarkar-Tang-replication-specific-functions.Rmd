@@ -37,20 +37,22 @@ get_variance_parameter_estimate <- function(X, Y){
 
 get_T_1 <- function(X, Y){
   sigma <- solve(t(X) %*% X)
-  D <- create.solve_sdp_personal(X)
+  D <- create.solve_sdp_personal(t(X) %*% X)
   X_ko <- create.fixed(X)$Xk
   beta_hat_1 <- solve(2 * sigma - D) %*% t(X + X_ko) %*% Y
   # tau hat estimated with the columnwise concatenation of X and knockoff X
   T_1 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) *
     solve(sqrtm(solve(diag(diag(2 * sigma - D))))) %*% beta_hat_1 # unsure about interpretation of diag operator in the equation for T1 from the paper; this is my best interpretation of it - Ignat agrees
+  return(T_1)
 }
 
 # get the T_2 estimate 
 get_T_2 <- function(X, Y){
-  D <- create.solve_sdp_personal(X)
+  D <- create.solve_sdp_personal(t(X) %*% X)
   X_ko <- create.fixed(X)$Xk
   beta_hat_2 <- solve(D) %*% t(X - X_ko) %*% Y
   T_2 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) * sqrtm(D) %*% beta_hat_2
+  return(T_2)
 }
 
 ```

@@ -428,4 +428,12 @@ get_variance_parameter_estimate(X_temp, regression$Y)
 ```
 
 
+```{r}
+get_T_1(regression$X, regression$Y)
+```
+
+```{r}
+get_T_2(regression$X, regression$Y)
+```
+
 
