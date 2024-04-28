@@ -9,16 +9,50 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-
 ```{r}
-X <- matrix(c(1, 2, 3, 1, 2, 3), nrow = 2, byrow = TRUE)
-X
-X.svd <- svd(X)
-X.svd
+library(knockoff)
 ```
 
 
 # Internal functions in knockoffs package for computation purposes
+
+```{r}
+# Fast versions of diag(d) %*% X and X %*% diag(d).
+`%diag*%` <- function(d, X) d * X
+`%*diag%` <- function(X, d) t(t(X) * d)
+```
+
+```{r}
+is_posdef = function(A, tol=1e-9) {
+  p = nrow(matrix(A))
+  
+  if (p<500) {
+    lambda_min = min(eigen(A)$values)
+  }
+  else {
+    oldw <- getOption("warn")
+    options(warn = -1)
+    lambda_min = RSpectra::eigs(A, 1, which="SM", opts=list(retvec = FALSE, maxitr=100, tol))$values
+    options(warn = oldw)
+    if( length(lambda_min)==0 ) {
+      # RSpectra::eigs did not converge. Using eigen instead."
+      lambda_min = min(eigen(A)$values)
+    }
+  }
+  return (lambda_min>tol*10)
+}
+```
+
+```{r}
+# Scale the columns of a matrix to have unit norm.
+normc = function(X,center=T) {
+  X.centered = scale(X, center=center, scale=F)
+  X.scaled = scale(X.centered, center=F, scale=sqrt(colSums(X.centered^2)))
+  X.scaled[,] # No attributes
+}
+```
+
+
 
 ```{r}
 # Reduced SVD with canonical sign choice.
@@ -66,8 +100,10 @@ decompose <- function(X, randomize=FALSE) {
 
 
 ```{r}
+# I created the first function from the knockoffs package code
 create_equicorrelated_D <- function(X, randomize=FALSE) {
   # Compute SVD and U_perp.
+  X = normc(X, center=F)
   X.svd = decompose(X, randomize)
   
   # Set s = min(2 * smallest eigenvalue of X'X, 1), so that all the correlations
@@ -77,18 +113,100 @@ create_equicorrelated_D <- function(X, randomize=FALSE) {
                'Equicorrelated knockoffs will have no power.'))
   lambda_min = min(X.svd$d)^2
   s = min(2*lambda_min, 1)
-  return(s)
+  s_vec <- rep(s, times = ncol(X))
+  return(diag(s_vec))
 }
 
-create_equicorrelated_knockoffs <- function(X, randomize=FALSE){
+
+create_equicorrelated_knockoffs <- function(X, randomize=FALSE) {
+  # Compute SVD and U_perp.
+  X = normc(X, center=F)
+  X.svd = decompose(X, randomize)
+  
+  # Set s = min(2 * smallest eigenvalue of X'X, 1), so that all the correlations
+  # have the same value 1-s.
+  if (any(X.svd$d <= 1e-5 * max(X.svd$d)))
+    stop(paste('Data matrix is rank deficient.',
+               'Equicorrelated knockoffs will have no power.'))
+  lambda_min = min(X.svd$d)^2
+  s = min(2*lambda_min, 1)
+  
   # Construct the knockoff according to Equation 1.4.
-  s <- create_equicorrelated_D(X)
   s_diff = pmax(0, 2*s - (s/X.svd$d)^2) # can be negative due to numerical error
   X_ko = (X.svd$u %*diag% (X.svd$d - s / X.svd$d) +
           X.svd$u_perp %*diag% sqrt(s_diff)) %*% t(X.svd$v)
   return(X_ko)
 }
+
 ```
+
+
+
+
+```{r}
+# THIS IS A FUNCTION FROM THE PACKAGE, BUT I CHANGED THE OUTPUT TO BE DIAG(S)
+create.solve_equi <- function(Sigma) {
+  # Check that covariance matrix is symmetric
+  stopifnot(isSymmetric(Sigma))
+  p = nrow(Sigma)
+  tol = 1e-10
+  # Convert the covariance matrix to a correlation matrix
+  G = cov2cor(Sigma)
+  
+  # Check that the input matrix is positive-definite
+  if (!is_posdef(G)) {
+    stop('The covariance matrix is not positive-definite: cannot solve SDP',immediate.=T)
+  }
+  
+  if (p>2) {
+    converged=FALSE
+    maxitr=10000
+    while (!converged) {
+      lambda_min = RSpectra::eigs(G, 1, which="SR", opts=list(retvec = FALSE, maxitr=100000, tol=1e-8))$values
+      if (length(lambda_min)==1) {
+        converged = TRUE
+      } else {
+        if (maxitr>1e8) {
+          warning('In creation of equi-correlated knockoffs, while computing the smallest eigenvalue of the 
+                covariance matrix. RSpectra::eigs did not converge. Giving up and computing full SVD with built-in R function.',immediate.=T)
+          lambda_min = eigen(G, symmetric=T, only.values = T)$values[p]
+          converged=TRUE
+        } else {
+          warning('In creation of equi-correlated knockoffs, while computing the smallest eigenvalue of the 
+                covariance matrix. RSpectra::eigs did not converge. Trying again with increased number of iterations.',immediate.=T)
+          maxitr = maxitr*10
+        }
+      }
+    }
+  } else {
+    lambda_min = eigen(G, symmetric=T, only.values = T)$values[p]
+  }
+  
+  if (lambda_min<0) {
+    stop('In creation of equi-correlated knockoffs, while computing the smallest eigenvalue of the 
+                covariance matrix. The covariance matrix is not positive-definite.')
+  }
+  
+  s = rep(1, nrow(Sigma)) * min(2*lambda_min, 1)
+  
+  # Compensate for numerical errors (feasibility)
+  psd = 0;
+  s_eps = 1e-8;
+  while (psd==0) {
+    psd = is_posdef(2*G-diag(s*(1-s_eps),length(s)))
+    if (!psd) {
+      s_eps = s_eps*10
+    }
+  }
+  s = s*(1-s_eps)
+  
+  # Scale back the results for a covariance matrix
+  return(diag(s))
+}
+```
+
+
+
 
 # Functions specific to quantities from Sarkar and Tang
 
@@ -114,7 +232,7 @@ get_T_1 <- function(X, Y){
   sigma <- solve(t(X) %*% X)
   D <- create_equicorrelated_D(X)
   X_ko <- create_equicorrelated_knockoffs(X)
-  beta_hat_1 <- solve(2 * sigma - D) %*% t(X + t(X)) %*% Y
+  beta_hat_1 <- solve(2 * sigma - D) %*% t(X + X_ko) %*% Y
   # tau hat estimated with the columnwise concatenation of X and knockoff X
   T_1 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) *
     solve(sqrtm(solve(diag(diag(2 * sigma - D))))) %*% beta_hat_1 # unsure about interpretation of diag operator in the equation for T1 from the paper; this is my best interpretation of it - Ignat agrees
@@ -122,9 +240,9 @@ get_T_1 <- function(X, Y){
 
 # get the T_2 estimate 
 get_T_2 <- function(X, Y){
-  beta_hat_2 <- solve(D) %*% t(X - t(X_ko)) %*% Y
   D <- create_equicorrelated_D(X)
   X_ko <- create_equicorrelated_knockoffs(X)
+  beta_hat_2 <- solve(D) %*% t(X - X_ko) %*% Y
   T_2 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) * sqrtm(D) %*% beta_hat_2
 }
 
@@ -270,5 +388,70 @@ sarkar_tang_method1 <- function(X, Y, alpha){
 ```
 
 
+```{r}
+set.seed(12)
+fdp_vec <- numeric(num_iterations)
+pwr_vec <- c(num_iterations)
+for (m in 1:num_iterations){
+  num_true_signals <- 20
+  d <- 100
+  feature_indices <- 1:d
+  regression <- get_regression_model(n = 1000, d = d, a = 4, num_true_signals = num_true_signals)
+  true_nonzero_indices <- regression$nonzero_indices
+  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .05)
+  num_rejections <- length(rejected_indices)
+  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
+  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
+  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
+  pwr_vec[m] <- num_correct_rejections / max(num_rejections, 1)
+}
+mean(fdp_vec)
+mean(pwr_vec)
+```
+
+```{r}
+regression <- get_regression_model(n = 100, d = 20, a = 4, num_true_signals = 10)
+Sigma <- t(regression$X) %*% regression$X
+create.solve_equi(Sigma)
+create_equicorrelated_D(regression$X)
+```
+
+
+```{r}
+create.fixed(regression$X, method = 'equi')$Xk
+```
+
+```{r}
+create_equicorrelated_knockoffsv2(regression$X)
+```
+
+
+```{r}
+create_equicorrelated_knockoffs(regression$X)
+```
+
+
+```{r}
+create_equicorrelated_D(regression$X)
+```
+
+
+```{r}
+create_equicorrelated_knockoffsv2 <- function(X, randomize=FALSE){
+  # Construct the knockoff according to Equation 1.4.
+  s <- create.solve_equi(t(X) %*% X)
+  X.svd = decompose(X, randomize)
+  s_diff = pmax(0, 2*s - (s/X.svd$d)^2) # can be negative due to numerical error
+  X_ko = (X.svd$u %*diag% (X.svd$d - s / X.svd$d) +
+          X.svd$u_perp %*diag% sqrt(s_diff)) %*% t(X.svd$v)
+  return(X_ko)
+}
+```
+
+
+
+```{r}
+create_equicorrelated_knockoffs(regression$X)
+```
 
 
