@@ -1,0 +1,166 @@
+---
+title: "Sarkar and Tang specific functions"
+author: "Ethan Naegele"
+date: "2024-04-28"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(knockoff)
+library(expm)
+```
+
+
+# Functions specific to quantities from Sarkar and Tang
+
+```{r}
+# faster function for calculating norm of vector
+norm_vec <- function(x) sqrt(sum(x^2))
+
+# obtain the unbiased estimator of the variance parameter tau in the regression setting Y = N(X * beta, tau^2 I_n)
+get_variance_parameter_estimate <- function(X, Y){
+  n <- nrow(X)
+  d <- ncol(X)
+  tau_hat_squared <- (norm_vec(Y - X %*% solve(t(X) %*% X) %*% t(X) %*% Y))^2 / (n - d) # numerator is RSS, and assuming n > d
+  return(sqrt(tau_hat_squared))
+}
+```
+
+
+
+```{r}
+# get the T_1  estimate provided at the beginning of section 2
+
+get_T_1 <- function(X, Y){
+  sigma <- solve(t(X) %*% X)
+  D <- create.solve_sdp_personal(X)
+  X_ko <- create.fixed(X)$Xk
+  beta_hat_1 <- solve(2 * sigma - D) %*% t(X + X_ko) %*% Y
+  # tau hat estimated with the columnwise concatenation of X and knockoff X
+  T_1 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) *
+    solve(sqrtm(solve(diag(diag(2 * sigma - D))))) %*% beta_hat_1 # unsure about interpretation of diag operator in the equation for T1 from the paper; this is my best interpretation of it - Ignat agrees
+}
+
+# get the T_2 estimate 
+get_T_2 <- function(X, Y){
+  D <- create.solve_sdp_personal(X)
+  X_ko <- create.fixed(X)$Xk
+  beta_hat_2 <- solve(D) %*% t(X - X_ko) %*% Y
+  T_2 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) * sqrtm(D) %*% beta_hat_2
+}
+
+```
+
+
+
+```{r}
+get_regression_model <- function(n, d, a, num_true_signals, random_true_signal_indices = FALSE){
+  # random_true_signal_indices selects which indices will be true signals randomly
+  # n = sample size, ie number of rows in the matrix
+  # d = number of features
+  # a = signal strength
+  # num_true_signals = number of nonzero beta coefficients
+  # Returns an X matrix, response Y, and the positions of the true signals, as according to the simulation setup described in the beginning of Section 3 of Sarkar and Tang
+  rho <- 0.5
+   cor_matrix <- matrix(nrow = d, ncol = d)
+for (i in 1:d) {
+  for (j in 1:d) {
+    cor_matrix[i, j] <- rho^abs(i - j)
+  }
+}
+
+# Perform Cholesky decomposition of the correlation matrix
+cholesky_factor <- chol(cor_matrix)
+
+# Generate independent standard normal variables
+random_normals <- matrix(rnorm(n * d), nrow = n, ncol = d)
+
+# Transform the independent normals using the Cholesky factor to get correlated normals
+X <- random_normals %*% cholesky_factor
+
+X <- normc(X, center = F)
+
+if (random_true_signal_indices){
+  nonzero_indices <- sample(d, num_true_signals) # randomly sample some indices to be the true signal indices
+  beta_true <- a * (1:d %in% nonzero_indices) # all the other positions in the vector will be 0
+}
+else{
+  nonzero_indices <- 1:num_true_signals
+  beta_true <- c(rep(a, times = num_true_signals), rep(0, times = d - num_true_signals))
+}
+
+Y <- X %*% beta_true + rnorm(n) # linear regression model
+
+return(list('X' = X, 'Y' = Y, 'nonzero_indices' = nonzero_indices))
+}
+```
+
+
+```{r}
+get_regression_model(n = 100, d = 10, a = 2, num_true_signals = 1)
+```
+
+
+```{r}
+sarkar_tang_method1 <- function(X, Y, alpha){
+  d <- ncol(X)
+  nu <- nrow(X) - 2 * d # n - 2d assuming n > 2d
+  T1 <- get_T_1(X, Y)
+  T2 <- get_T_2(X, Y)
+  P_t1 <- pf(T1^2, 1, nu, lower.tail = FALSE) # to calculate probabilities with the t^2_n distribution, have to use the F(1, n) distribution
+  P_t2 <- pf(T2^2, 1, nu, lower.tail = FALSE)
+  P_tilde <- numeric(d)
+  for (j in 1:d){
+    if (P_t1[j] > sqrt(alpha)){
+      P_tilde[j] <- 1
+    }
+    else{
+      P_tilde[j] <- P_t2[j]
+    }
+  }
+  P_tilde_BH <- p.adjust(P_tilde, method = "BH")
+  rejected_indices <- which(P_tilde_BH < sqrt(alpha))
+  return(rejected_indices) # the indices of the features that the test concludes are nonzero
+  
+}
+```
+
+
+```{r}
+set.seed(123)
+fdp_vec <- numeric(num_iterations)
+pwr_vec <- c(num_iterations)
+for (m in 1:num_iterations){
+  num_true_signals <- 20
+  d <- 100
+  feature_indices <- 1:d
+  regression <- get_regression_model(n = 1000, d = d, a = 4, num_true_signals = num_true_signals)
+  true_nonzero_indices <- regression$nonzero_indices
+  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .05)
+  num_rejections <- length(rejected_indices)
+  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
+  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
+  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
+  pwr_vec[m] <- num_correct_rejections / max(num_rejections, 1)
+}
+mean(fdp_vec)
+mean(pwr_vec)
+```
+
+
+
+```{r}
+set.seed(12)
+ num_true_signals <- 20
+  d <- 30
+  feature_indices <- 1:d
+  regression <- get_regression_model(n = 100, d = d, a = 4, num_true_signals = num_true_signals)
+  true_nonzero_indices <- regression$nonzero_indices
+  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .05)
+```
+
+

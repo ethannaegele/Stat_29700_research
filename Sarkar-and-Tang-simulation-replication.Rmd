@@ -12,6 +12,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(knockoff)
 ```
+```{r}
+library(Matrix)
+```
 
 
 # Internal functions in knockoffs package for computation purposes
@@ -145,7 +148,7 @@ create_equicorrelated_knockoffs <- function(X, randomize=FALSE) {
 
 ```{r}
 # THIS IS A FUNCTION FROM THE PACKAGE, BUT I CHANGED THE OUTPUT TO BE DIAG(S)
-create.solve_equi <- function(Sigma) {
+create.solve_equi_personal <- function(Sigma) {
   # Check that covariance matrix is symmetric
   stopifnot(isSymmetric(Sigma))
   p = nrow(Sigma)
@@ -207,223 +210,171 @@ create.solve_equi <- function(Sigma) {
 
 
 
-
-# Functions specific to quantities from Sarkar and Tang
-
 ```{r}
-# faster function for calculating norm of vector
-norm_vec <- function(x) sqrt(sum(x^2))
-
-# obtain the unbiased estimator of the variance parameter tau in the regression setting Y = N(X * beta, tau^2 I_n)
-get_variance_parameter_estimate <- function(X, Y){
-  n <- nrow(X)
-  d <- ncol(X)
-  tau_hat_squared <- (norm_vec(Y - X %*% solve(t(X) %*% X) %*% t(X) %*% Y))^2 / (n - d) # numerator is RSS, and assuming n > d
-  return(sqrt(tau_hat_squared))
-}
-```
-
-
-
-```{r}
-# get the T_1  estimate provided at the beginning of section 2
-library(expm)
-get_T_1 <- function(X, Y){
-  sigma <- solve(t(X) %*% X)
-  D <- create_equicorrelated_D(X)
-  X_ko <- create_equicorrelated_knockoffs(X)
-  beta_hat_1 <- solve(2 * sigma - D) %*% t(X + X_ko) %*% Y
-  # tau hat estimated with the columnwise concatenation of X and knockoff X
-  T_1 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) *
-    solve(sqrtm(solve(diag(diag(2 * sigma - D))))) %*% beta_hat_1 # unsure about interpretation of diag operator in the equation for T1 from the paper; this is my best interpretation of it - Ignat agrees
-}
-
-# get the T_2 estimate 
-get_T_2 <- function(X, Y){
-  D <- create_equicorrelated_D(X)
-  X_ko <- create_equicorrelated_knockoffs(X)
-  beta_hat_2 <- solve(D) %*% t(X - X_ko) %*% Y
-  T_2 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) * sqrtm(D) %*% beta_hat_2
-}
-
-```
-
-
-```{r}
-set.seed(12)
-n <- 100  # Number of rows
-d <- 10   # Number of columns
-rho <- 0.5  # AR(1) coefficient
-
-# Create the correlation matrix based on AR(1) structure
-cor_matrix <- matrix(nrow = d, ncol = d)
-for (i in 1:d) {
-  for (j in 1:d) {
-    cor_matrix[i, j] <- rho^abs(i - j)
-  }
-}
-
-# Perform Cholesky decomposition of the correlation matrix
-cholesky_factor <- chol(cor_matrix)
-
-# Generate independent standard normal variables
-random_normals <- matrix(rnorm(n * d), nrow = n, ncol = d)
-
-# Transform the independent normals using the Cholesky factor to get correlated normals
-correlated_normals <- random_normals %*% cholesky_factor
-
-# The 'correlated_normals' matrix now has the desired properties
-print(correlated_normals)
-
-```
-
-```{r}
-set.seed(12)
-num_iterations <- 500
-n <- 100  # Number of rows
-d <- 10   # Number of columns
-a <- 2 # signal strength
-num_true_signals <- ceiling(.1 * d)
-rho <- 0.5  # AR(1) coefficient
-for (m in num_iterations){
-  cor_matrix <- matrix(nrow = d, ncol = d)
-for (i in 1:d) {
-  for (j in 1:d) {
-    cor_matrix[i, j] <- rho^abs(i - j)
-  }
-}
-
-# Perform Cholesky decomposition of the correlation matrix
-cholesky_factor <- chol(cor_matrix)
-
-# Generate independent standard normal variables
-random_normals <- matrix(rnorm(n * d), nrow = n, ncol = d)
-
-# Transform the independent normals using the Cholesky factor to get correlated normals
-X <- random_normals %*% cholesky_factor
-
-nonzero_indices <- sample(d, num_true_signals) # randomly sample some indices to be the true signal indices
-
-beta_true <- a * (1:d %in% nonzero_indices) # all the other positions in the vector will be 0
-
-Y <- X %*% beta_true + rnorm(n)
-
-
-
-}
-```
-
-
-
-```{r}
-get_regression_model <- function(n, d, a, num_true_signals, random_true_signal_indices = FALSE){
-  # random_true_signal_indices selects which indices will be true signals randomly
-  # n = sample size, ie number of rows in the matrix
-  # d = number of features
-  # a = signal strength
-  # num_true_signals = number of nonzero beta coefficients
-  # Returns an X matrix, response Y, and the positions of the true signals, as according to the simulation setup described in the beginning of Section 3 of Sarkar and Tang
+# I MODIFIED THE FUNCTION FROM THE ORIGINAL TO JUST RETURN DIAG(S)
+create.solve_sdp_personal <- function(Sigma, gaptol=1e-6, maxit=1000, verbose=FALSE) {
+  # Check that covariance matrix is symmetric
+  stopifnot(isSymmetric(Sigma))
+  # Convert the covariance matrix to a correlation matrix
+  G = cov2cor(Sigma)
+  p = dim(G)[1]
   
-   cor_matrix <- matrix(nrow = d, ncol = d)
-for (i in 1:d) {
-  for (j in 1:d) {
-    cor_matrix[i, j] <- rho^abs(i - j)
+  # Check that the input matrix is positive-definite
+  if (!is_posdef(G)) {
+    warning('The covariance matrix is not positive-definite: knockoffs may not have power.', immediate.=T)
   }
-}
-
-# Perform Cholesky decomposition of the correlation matrix
-cholesky_factor <- chol(cor_matrix)
-
-# Generate independent standard normal variables
-random_normals <- matrix(rnorm(n * d), nrow = n, ncol = d)
-
-# Transform the independent normals using the Cholesky factor to get correlated normals
-X <- random_normals %*% cholesky_factor
-
-
-
-if (random_true_signal_indices){
-  nonzero_indices <- sample(d, num_true_signals) # randomly sample some indices to be the true signal indices
-  beta_true <- a * (1:d %in% nonzero_indices) # all the other positions in the vector will be 0
-}
-else{
-  nonzero_indices <- 1:num_true_signals
-  beta_true <- c(rep(a, times = num_true_signals), rep(0, times = d - num_true_signals))
-}
-
-Y <- X %*% beta_true + rnorm(n) # linear regression model
-
-return(list('X' = X, 'Y' = Y, 'nonzero_indices' = nonzero_indices))
-}
-```
-
-
-```{r}
-get_regression_model(n = 100, d = 10, a = 2, num_true_signals = 1)
-```
-
-
-```{r}
-sarkar_tang_method1 <- function(X, Y, alpha){
-  d <- ncol(X)
-  nu <- nrow(X) - 2 * d # n - 2d assuming n > 2d
-  T1 <- get_T_1(X, Y)
-  T2 <- get_T_2(X, Y)
-  P_t1 <- pf(T1^2, 1, nu, lower.tail = FALSE) # to calculate probabilities with the t^2_n distribution, have to use the F(1, n) distribution
-  P_t2 <- pf(T2^2, 1, nu, lower.tail = FALSE)
-  P_tilde <- numeric(d)
-  for (j in 1:d){
-    if (P_t1[j] > sqrt(alpha)){
-      P_tilde[j] <- 1
+  
+  # Convert problem for SCS
+  
+  # Linear constraints
+  Cl1 = rep(0,p)
+  Al1 = -Matrix::Diagonal(p)
+  Cl2 = rep(1,p)
+  Al2 = Matrix::Diagonal(p)
+  
+  # Positive-definite cone
+  d_As = c(diag(p))
+  As = Matrix::Diagonal(length(d_As), x=d_As)
+  As = As[which(Matrix::rowSums(As) > 0),] 
+  Cs = c(2*G)
+  
+  # Assemble constraints and cones
+  A = cbind(Al1,Al2,As)
+  C = matrix(c(Cl1,Cl2,Cs),1)
+  K=NULL
+  K$s=p
+  K$l=2*p
+  
+  # Objective
+  b = rep(1,p)
+  
+  # Solve SDP with Rdsdp
+  OPTIONS=NULL
+  OPTIONS$gaptol=gaptol
+  OPTIONS$maxit=maxit
+  OPTIONS$logsummary=0
+  OPTIONS$outputstats=0
+  OPTIONS$print=0
+  if(verbose) cat("Solving SDP ... ")
+  sol = Rdsdp::dsdp(A,b,C,K,OPTIONS)
+  if(verbose) cat("done. \n")
+  
+  # Check whether the solution is feasible
+  if( ! identical(sol$STATS$stype,"PDFeasible")) {
+    warning('The SDP solver returned a non-feasible solution. Knockoffs may lose power.')
+  }
+  
+  # Clip solution to correct numerical errors (domain)
+  s = sol$y
+  s[s<0]=0
+  s[s>1]=1
+  
+  # Compensate for numerical errors (feasibility)
+  if(verbose) cat("Verifying that the solution is correct ... ")
+  psd = 0
+  s_eps = 1e-8
+  while ((psd==0) & (s_eps<=0.1)) {
+    if (is_posdef(2*G-diag(s*(1-s_eps),length(s)),tol=1e-9)) {
+      psd  = 1
     }
-    else{
-      P_tilde[j] <- P_t2[j]
+    else {
+      s_eps = s_eps*10
     }
   }
-  P_tilde_BH <- p.adjust(P_tilde, method = "BH")
-  rejected_indices <- which(P_tilde_BH < sqrt(alpha))
-  return(rejected_indices) # the indices of the features that the test concludes are nonzero
+  s = s*(1-s_eps)
+  s[s<0]=0
+  if(verbose) cat("done. \n")
   
+  # Verify that the solution is correct
+  if (all(s==0)) {
+    warning('In creation of SDP knockoffs, procedure failed. Knockoffs will have no power.',immediate.=T)
+  }
+  
+  # Scale back the results for a covariance matrix
+  return(diag(s))
 }
+```
+
+```{r}
+# COPIED FROM THE INTERNAL FUNCTION FROM THE PACKAGE
+create_sdp_knockoffs <- function(X, randomize=FALSE) {
+  # Compute SVD and U_perp.
+  X.svd = decompose(X, randomize)
+  
+  # Check for rank deficiency.
+  tol = 1e-5
+  d = X.svd$d
+  d_inv = 1 / d
+  d_zeros = d <= tol*max(d)
+  if (any(d_zeros)) {
+    warning(paste('Data matrix is rank deficient.',
+                  'Model is not identifiable, but proceeding with SDP knockoffs'),immediate.=T)
+    d_inv[d_zeros] = 0
+  }
+  
+  # Compute the Gram matrix and its (pseudo)inverse.
+  G = (X.svd$v %*diag% d^2) %*% t(X.svd$v)
+  G_inv = (X.svd$v %*diag% d_inv^2) %*% t(X.svd$v)
+  
+  # Optimize the parameter s of Equation 1.3 using SDP.
+  s = create.solve_sdp_personal(G)
+  s[s <= tol] = 0
+  
+  # Construct the knockoff according to Equation 1.4:
+  C.svd = canonical_svd(2*diag(s) - (s %diag*% G_inv %*diag% s))
+  X_ko = X - (X %*% G_inv %*diag% s) + 
+    (X.svd$u_perp %*diag% sqrt(pmax(0, C.svd$d))) %*% t(C.svd$v)
+}
+
+```
+
+
+
+
+
+
+# other calculations
+
+
+```{r}
+X_new <- cbind(regression$X, create.fixed(regression$X, method = 'equi')$Xk)
+```
+
+```{r}
+rcond(t(X_new) %*% X_new)
+```
+
+```{r}
+create.solve_equi(t(X_new) %*% X_new)
+```
+
+
+
+
+```{r}
+create.fixed(regression$X, method = 'equi')$Xk == create_equicorrelated_knockoffs(regression$X)
+```
+
+```{r}
+create.fixed(regression$X)$Xk == create_sdp_knockoffs(regression$X)
+```
+
+```{r}
+create.solve_sdp_personal(t(regression$X) %*% regression$X)
 ```
 
 
 ```{r}
-set.seed(12)
-fdp_vec <- numeric(num_iterations)
-pwr_vec <- c(num_iterations)
-for (m in 1:num_iterations){
-  num_true_signals <- 20
-  d <- 100
-  feature_indices <- 1:d
-  regression <- get_regression_model(n = 1000, d = d, a = 4, num_true_signals = num_true_signals)
-  true_nonzero_indices <- regression$nonzero_indices
-  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .05)
-  num_rejections <- length(rejected_indices)
-  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
-  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
-  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
-  pwr_vec[m] <- num_correct_rejections / max(num_rejections, 1)
-}
-mean(fdp_vec)
-mean(pwr_vec)
+solve(t(X_new) %*% X_new)
 ```
 
-```{r}
-regression <- get_regression_model(n = 100, d = 20, a = 4, num_true_signals = 10)
-Sigma <- t(regression$X) %*% regression$X
-create.solve_equi(Sigma)
-create_equicorrelated_D(regression$X)
-```
+
 
 
 ```{r}
 create.fixed(regression$X, method = 'equi')$Xk
 ```
 
-```{r}
-create_equicorrelated_knockoffsv2(regression$X)
-```
 
 
 ```{r}
@@ -453,5 +404,28 @@ create_equicorrelated_knockoffsv2 <- function(X, randomize=FALSE){
 ```{r}
 create_equicorrelated_knockoffs(regression$X)
 ```
+
+```{r}
+create_equicorrelated_D(regression$X)
+```
+
+
+```{r}
+create.solve_equi(t(regression$X) %*% regression$X)
+```
+
+
+
+```{r}
+X_ko <- create.fixed(regression$X)$Xk
+#get_variance_parameter_estimate(cbind(regression$X, X_ko), regression$Y)
+X_temp <- cbind(regression$X, X_ko)
+solve(t(X_temp) %*% X_temp)
+```
+
+```{r}
+get_variance_parameter_estimate(X_temp, regression$Y)
+```
+
 
 
