@@ -539,8 +539,53 @@ X_temp <- cbind(regression$X, X_ko)
 get_variance_parameter_estimate(regression$X, as.vector(regression$Y))
 inv(t(X_temp) %*% X_temp)
 ```
+
+
+
 ```{r}
-class(regression$Y)
+set.seed(12)
+regression <- get_regression_model(n = 200, d = 30, a = 2, num_true_signals = 10)
+result <- get_T_1(regression$X, regression$Y)
+#get_T_2(regression$X, regression$Y)
 ```
+
+
+```{r}
+result
+```
+
+```{r}
+diag(diag(result))
+```
+
+```{r}
+solve(diag(diag(result)))
+```
+
+
+
+```{r}
+is_posdef(result) # 2 * sigma - D should be positive definite, is not
+```
+
+```{r}
+is_posdef(solve(diag(diag(result))))
+```
+
+```{r}
+sqrtm(solve(diag(diag(result))))$B %*% sqrtm(solve(diag(diag(result))))$B
+```
+
+
+```{r}
+sqrtm(solve(diag(diag(result))))$Binv
+```
+
+```{r}
+get_variance_parameter_estimate(cbind(regression$X, create.fixed(regression$X, method = 'sdp')$Xk), regression$Y)
+```
+
+
+
 
 

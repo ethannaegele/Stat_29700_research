@@ -26,9 +26,9 @@ get_variance_parameter_estimate <- function(X, Y){
   n <- nrow(X)
   d <- ncol(X)
   # Ensure Y is a vector and has appropriate length
-  if (!is.vector(Y) || length(Y) != nrow(X)) {
-    stop("Y must be a vector and match the number of rows in X")
-  }
+  #if (!is.vector(Y) || length(Y) != nrow(X)) {
+   # stop("Y must be a vector and match the number of rows in X")
+ # }
   
   # Assign names to columns of X if not already named
   if (is.null(colnames(X))) {
@@ -58,24 +58,26 @@ get_variance_parameter_estimate <- function(X, Y){
 
 ```{r}
 # get the T_1  estimate provided at the beginning of section 2
-
+# SQRTM USES THE PRACMA VERSION HERE CURRENTLY
 get_T_1 <- function(X, Y){
-  sigma <- solve(t(X) %*% X)
-  D <- create.solve_sdp_personal(t(X) %*% X)
+  sigma <- t(X) %*% X
+  D <- diag(create.solve_sdp(sigma)) # need to turn the output into a diagonal matrix
   X_ko <- create.fixed(X)$Xk
   beta_hat_1 <- solve(2 * sigma - D) %*% t(X + X_ko) %*% Y
   # tau hat estimated with the columnwise concatenation of X and knockoff X
   T_1 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) *
-    solve(sqrtm(solve(diag(diag(2 * sigma - D))))) %*% beta_hat_1 # unsure about interpretation of diag operator in the equation for T1 from the paper; this is my best interpretation of it - Ignat agrees
+    sqrtm(solve(diag(diag(2 * sigma - D))))$Binv %*% beta_hat_1 # unsure about interpretation of diag operator in the equation for T1 from the paper; this is my best interpretation of it - Ignat agrees. Binv returns the inverse of the square root that sqrtm calculates, which is what the formula requires.
+  #return(D)
+  #return(2 * sigma - D)
   return(T_1)
 }
 
 # get the T_2 estimate 
 get_T_2 <- function(X, Y){
-  D <- create.solve_sdp_personal(t(X) %*% X)
+  D <- diag(create.solve_sdp(t(X) %*% X))
   X_ko <- create.fixed(X)$Xk
   beta_hat_2 <- solve(D) %*% t(X - X_ko) %*% Y
-  T_2 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) * sqrtm(D) %*% beta_hat_2
+  T_2 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) * sqrtm(D)$B %*% beta_hat_2
   return(T_2)
 }
 
@@ -108,7 +110,7 @@ random_normals <- matrix(rnorm(n * d), nrow = n, ncol = d)
 # Transform the independent normals using the Cholesky factor to get correlated normals
 X <- random_normals %*% cholesky_factor
 
-#X <- normc(X, center = F)
+X <- normc(X, center = F) # X ABSOLUTELY MUST be normalized to get sensical values from the knockoff functions. Here using the normalizing function used internally in the package
 
 if (random_true_signal_indices){
   nonzero_indices <- sample(d, num_true_signals) # randomly sample some indices to be the true signal indices
@@ -180,7 +182,7 @@ mean(pwr_vec)
 
 
 ```{r}
-set.seed(12)
+set.seed(1234)
  num_true_signals <- 20
   d <- 30
   feature_indices <- 1:d
