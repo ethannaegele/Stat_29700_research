@@ -25,8 +25,32 @@ norm_vec <- function(x) sqrt(sum(x^2))
 get_variance_parameter_estimate <- function(X, Y){
   n <- nrow(X)
   d <- ncol(X)
-  tau_hat_squared <- (norm_vec(Y - X %*% solve(t(X) %*% X) %*% t(X) %*% Y))^2 / (n - d) # numerator is RSS, and assuming n > d
-  return(sqrt(tau_hat_squared))
+  # Ensure Y is a vector and has appropriate length
+  if (!is.vector(Y) || length(Y) != nrow(X)) {
+    stop("Y must be a vector and match the number of rows in X")
+  }
+  
+  # Assign names to columns of X if not already named
+  if (is.null(colnames(X))) {
+    colnames(X) <- paste("Var", 1:ncol(X), sep="")
+  }
+  
+  # Convert X to a data frame
+  df_X <- as.data.frame(X)
+  
+  # Add Y to the dataframe
+  df_X$Y <- Y
+  
+  # Dynamically create the formula
+  predictor_names <- names(df_X)[names(df_X) != "Y"]
+  formula_string <- paste("Y ~", paste(predictor_names, collapse = " + "))
+  
+  # Fit the model using the formula
+  model <- lm(formula_string, data=df_X)
+  #tau_hat_squared <- (norm_vec(Y - X %*% solve(t(X) %*% X) %*% t(X) %*% Y))^2 / (n - d) # numerator is RSS, and assuming n > d
+  residuals_sum_sq <- deviance(model)
+  return(sqrt(residuals_sum_sq / (n - d)))
+  #return(sqrt(tau_hat_squared))
 }
 ```
 
@@ -84,7 +108,7 @@ random_normals <- matrix(rnorm(n * d), nrow = n, ncol = d)
 # Transform the independent normals using the Cholesky factor to get correlated normals
 X <- random_normals %*% cholesky_factor
 
-X <- normc(X, center = F)
+#X <- normc(X, center = F)
 
 if (random_true_signal_indices){
   nonzero_indices <- sample(d, num_true_signals) # randomly sample some indices to be the true signal indices

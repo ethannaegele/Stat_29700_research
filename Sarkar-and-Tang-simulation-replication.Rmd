@@ -436,4 +436,111 @@ get_T_1(regression$X, regression$Y)
 get_T_2(regression$X, regression$Y)
 ```
 
+```{r}
+results <- sarkar_tang_method1(regression$X, regression$Y, .05)
+```
+
+```{r}
+length(results)
+```
+
+```{r}
+set.seed(12)
+ num_true_signals <- 20
+  d <- 30
+  feature_indices <- 1:d
+  regression <- get_regression_model(n = 100, d = d, a = 4, num_true_signals = num_true_signals)
+  true_nonzero_indices <- regression$nonzero_indices
+  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .05)
+```
+
+
+```{r}
+regression <- get_regression_model(n = 200, d = 30, a = 2, num_true_signals = 1)
+#get_T_1(regression$X, regression$Y)
+#get_T_2(regression$X, regression$Y)
+```
+
+```{r}
+set.seed(12)
+X_ko <- create.fixed(regression$X, method = 'sdp')$Xk
+X_temp <- cbind(regression$X, X_ko)
+rcond(t(X_temp) %*% X_temp)
+qr_decomp <- qr(t(X_temp) %*% X_temp)
+solve(qr.R(qr_decomp), qr.Q(qr_decomp))
+```
+
+```{r}
+library(pracma)
+```
+
+```{r}
+inv(t(X_temp) %*% X_temp)
+```
+
+```{r}
+X <- matrix(runif(100), ncol=5)  # 20 observations, 5 predictors
+Y <- rnorm(20)  # 20 observations
+
+# Fit the model
+estimate <- get_variance_parameter_estimate(X, Y)
+
+# Print the summary of the model
+estimate
+```
+
+```{r}
+fit_linear_model <- function(X, Y) {
+  # Ensure Y is a vector and has appropriate length
+  if (!is.vector(Y) || length(Y) != nrow(X)) {
+    stop("Y must be a vector and match the number of rows in X")
+  }
+  
+  # Assign names to columns of X if not already named
+  if (is.null(colnames(X))) {
+    colnames(X) <- paste("Var", 1:ncol(X), sep="")
+  }
+  
+  # Convert X to a data frame
+  df_X <- as.data.frame(X)
+  
+  # Add Y to the dataframe
+  df_X$Y <- Y
+  
+  # Dynamically create the formula
+  predictor_names <- names(df_X)[names(df_X) != "Y"]
+  formula_string <- paste("Y ~", paste(predictor_names, collapse = " + "))
+  
+  # Fit the model using the formula
+  model <- lm(formula_string, data=df_X)
+  
+  # Return the fitted model
+  return(model)
+}
+
+# Example usage:
+# Assume X is your matrix with predictors and Y is your response vector
+X <- matrix(runif(100), ncol=5)  # 20 observations, 5 predictors
+Y <- rnorm(20)  # 20 observations
+
+# Fit the model
+model <- fit_linear_model(X, Y)
+
+# Print the summary of the model
+summary(model)
+
+```
+
+```{r}
+# evidence that fitting the model via the built in R function to estimate the variance results in successful calculation, even when the matrix X^T X appears to be computationally singular
+set.seed(12)
+X_ko <- create.fixed(regression$X, method = 'sdp')$Xk
+X_temp <- cbind(regression$X, X_ko)
+get_variance_parameter_estimate(regression$X, as.vector(regression$Y))
+inv(t(X_temp) %*% X_temp)
+```
+```{r}
+class(regression$Y)
+```
+
 
