@@ -11,10 +11,10 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(knockoff)
-```
-```{r}
 library(Matrix)
+library(pracma)
 ```
+
 
 
 # Internal functions in knockoffs package for computation purposes
@@ -585,7 +585,14 @@ sqrtm(solve(diag(diag(result))))$Binv
 get_variance_parameter_estimate(cbind(regression$X, create.fixed(regression$X, method = 'sdp')$Xk), regression$Y)
 ```
 
+```{r}
+create.solve_equi(t(regression$X) %*% regression$X)
+```
 
+
+```{r}
+create_equicorrelated_D(regression$X)
+```
 
 
 

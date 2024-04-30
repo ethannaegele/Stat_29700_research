@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(knockoff)
-library(expm)
+library(pracma)
 ```
 
 
@@ -61,11 +61,11 @@ get_variance_parameter_estimate <- function(X, Y){
 # SQRTM USES THE PRACMA VERSION HERE CURRENTLY
 get_T_1 <- function(X, Y){
   sigma <- t(X) %*% X
-  D <- diag(create.solve_sdp(sigma)) # need to turn the output into a diagonal matrix
-  X_ko <- create.fixed(X)$Xk
+  D <- diag(create.solve_equi(sigma)) # need to turn the output into a diagonal matrix
+  X_ko <- create.fixed(X, method = 'equi')$Xk
   beta_hat_1 <- solve(2 * sigma - D) %*% t(X + X_ko) %*% Y
   # tau hat estimated with the columnwise concatenation of X and knockoff X
-  T_1 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) *
+  T_1 <- (1 / (get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2))) *
     sqrtm(solve(diag(diag(2 * sigma - D))))$Binv %*% beta_hat_1 # unsure about interpretation of diag operator in the equation for T1 from the paper; this is my best interpretation of it - Ignat agrees. Binv returns the inverse of the square root that sqrtm calculates, which is what the formula requires.
   #return(D)
   #return(2 * sigma - D)
@@ -74,10 +74,10 @@ get_T_1 <- function(X, Y){
 
 # get the T_2 estimate 
 get_T_2 <- function(X, Y){
-  D <- diag(create.solve_sdp(t(X) %*% X))
-  X_ko <- create.fixed(X)$Xk
+  D <- diag(create.solve_equi(t(X) %*% X))
+  X_ko <- create.fixed(X, method = 'equi')$Xk
   beta_hat_2 <- solve(D) %*% t(X - X_ko) %*% Y
-  T_2 <- (1 / get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2)) * sqrtm(D)$B %*% beta_hat_2
+  T_2 <- (1 / (get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2))) * sqrtm(D)$B %*% beta_hat_2
   return(T_2)
 }
 
@@ -151,7 +151,7 @@ sarkar_tang_method1 <- function(X, Y, alpha){
     }
   }
   P_tilde_BH <- p.adjust(P_tilde, method = "BH")
-  rejected_indices <- which(P_tilde_BH < sqrt(alpha))
+  rejected_indices <- which(P_tilde_BH <= sqrt(alpha))
   return(rejected_indices) # the indices of the features that the test concludes are nonzero
   
 }
@@ -159,26 +159,32 @@ sarkar_tang_method1 <- function(X, Y, alpha){
 
 
 ```{r}
-set.seed(123)
+set.seed(12)
+num_iterations <- 100
 fdp_vec <- numeric(num_iterations)
 pwr_vec <- c(num_iterations)
 for (m in 1:num_iterations){
-  num_true_signals <- 20
-  d <- 100
+  num_true_signals <- 12
+  d <- 50
   feature_indices <- 1:d
-  regression <- get_regression_model(n = 1000, d = d, a = 4, num_true_signals = num_true_signals)
+  regression <- get_regression_model(n = 200, d = d, a = 8, num_true_signals = num_true_signals)
   true_nonzero_indices <- regression$nonzero_indices
-  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .05)
+  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .02)
   num_rejections <- length(rejected_indices)
   num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
   num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
   fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
-  pwr_vec[m] <- num_correct_rejections / max(num_rejections, 1)
+  pwr_vec[m] <- num_correct_rejections / max(true_nonzero_indices, 1)
 }
-mean(fdp_vec)
-mean(pwr_vec)
+fdr <- mean(fdp_vec)
+pwr <- mean(pwr_vec)
+fdr
+pwr
 ```
 
+```{r}
+rejected_indices
+```
 
 
 ```{r}
@@ -190,5 +196,10 @@ set.seed(1234)
   true_nonzero_indices <- regression$nonzero_indices
   rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .05)
 ```
+
+```{r}
+rejected_indices
+```
+
 
 
