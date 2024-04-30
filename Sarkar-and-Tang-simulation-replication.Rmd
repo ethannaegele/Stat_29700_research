@@ -594,5 +594,41 @@ create.solve_equi(t(regression$X) %*% regression$X)
 create_equicorrelated_D(regression$X)
 ```
 
+```{r}
+get_T_1(regression$X, regression$Y)
+```
+
+```{r}
+get_T_1(regression$X, regression$Y)
+```
+
+```{r}
+set.seed(12)
+vec <- c()
+for (m in 1:20) {
+  num_true_signals <- 8
+  d <- 40
+  regression <- get_regression_model(n = 100, d = d, a = 6, num_true_signals = num_true_signals)
+  vec <- c(vec, condition_number_test_equi(regression$X))
+}
+mean(vec)
+
+```
+
+
+
+```{r}
+set.seed(12)
+vec <- c()
+for (m in 1:20) {
+  num_true_signals <- 8
+  d <- 40
+  regression <- get_regression_model(n = 100, d = d, a = 6, num_true_signals = num_true_signals)
+  vec <- c(vec, condition_number_test_sdp(regression$X))
+}
+mean(vec)
+
+```
+
 
 

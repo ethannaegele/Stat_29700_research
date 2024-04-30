@@ -66,10 +66,11 @@ get_T_1 <- function(X, Y){
   beta_hat_1 <- solve(2 * sigma - D) %*% t(X + X_ko) %*% Y
   # tau hat estimated with the columnwise concatenation of X and knockoff X
   T_1 <- (1 / (get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2))) *
-    sqrtm(solve(diag(diag(2 * sigma - D))))$Binv %*% beta_hat_1 # unsure about interpretation of diag operator in the equation for T1 from the paper; this is my best interpretation of it - Ignat agrees. Binv returns the inverse of the square root that sqrtm calculates, which is what the formula requires.
-  #return(D)
-  #return(2 * sigma - D)
+    sqrtm(diag(diag(solve(2 * sigma - D))))$Binv %*% beta_hat_1 # unsure about interpretation of diag operator in the equation for T1 from the paper; this is my best interpretation of it - Ignat agrees. Binv returns the inverse of the square root that sqrtm calculates, which is what the formula requires. 
+  # The formula in the paper shows we invert 2 sigma - D first, then diag, but that is giving no power. If we 
+  # diag first then invert, it works but fdr is roughly twice alpha with high power. 
   return(T_1)
+  #return(rcond(2 * sigma - D))
 }
 
 # get the T_2 estimate 
@@ -159,17 +160,18 @@ sarkar_tang_method1 <- function(X, Y, alpha){
 
 
 ```{r}
+# Sarkar and Tang method 1 attempt
 set.seed(12)
-num_iterations <- 100
+num_iterations <- 300
 fdp_vec <- numeric(num_iterations)
 pwr_vec <- c(num_iterations)
 for (m in 1:num_iterations){
-  num_true_signals <- 12
-  d <- 50
+  num_true_signals <- 5
+  d <- 10
   feature_indices <- 1:d
   regression <- get_regression_model(n = 200, d = d, a = 8, num_true_signals = num_true_signals)
   true_nonzero_indices <- regression$nonzero_indices
-  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .02)
+  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .05)
   num_rejections <- length(rejected_indices)
   num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
   num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
@@ -182,24 +184,68 @@ fdr
 pwr
 ```
 
+
 ```{r}
-rejected_indices
+condition_number_test_sdp <- function(X){
+  sigma <- t(X) %*% X
+  D <- diag(create.solve_sdp(sigma))
+  return(rcond(2 * sigma - D))
+}
+```
+
+```{r}
+condition_number_test_equi <- function(X){
+  sigma <- t(X) %*% X
+  D <- diag(create.solve_equi(sigma))
+  return(rcond(2 * sigma - D))
+}
+```
+
+
+
+# BH using the independent vector only 
+
+
+using $\hat{\beta}_2$ only
+
+
+```{r}
+independent_BH <- function(X, Y, alpha = .05){
+  nu <- nrow(X) - 2 * ncol(X)
+  T2 <- get_T_2(X, Y)
+  P <- pf(T2^2, 1, nu, lower.tail = FALSE)
+  P_BH <- p.adjust(P, method = "BH")
+  rejected_indices <- which(P_BH <= alpha)
+  return(rejected_indices) # the indices of the features that the test concludes are nonzero
+}
 ```
 
 
 ```{r}
-set.seed(1234)
- num_true_signals <- 20
-  d <- 30
+# independent BH attempt (ie, only using beta_hat2)
+set.seed(12)
+num_iterations <- 200
+fdp_vec <- numeric(num_iterations)
+pwr_vec <- c(num_iterations)
+for (m in 1:num_iterations){
+  num_true_signals <- 8
+  d <- 40
   feature_indices <- 1:d
-  regression <- get_regression_model(n = 100, d = d, a = 4, num_true_signals = num_true_signals)
+  regression <- get_regression_model(n = 200, d = d, a = 10, num_true_signals = num_true_signals)
   true_nonzero_indices <- regression$nonzero_indices
-  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .05)
+  rejected_indices <- independent_BH(regression$X, regression$Y, alpha = .05)
+  num_rejections <- length(rejected_indices)
+  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
+  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
+  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
+  pwr_vec[m] <- num_correct_rejections / max(true_nonzero_indices, 1)
+}
+fdr <- mean(fdp_vec)
+pwr <- mean(pwr_vec)
+fdr
+pwr
 ```
 
-```{r}
-rejected_indices
-```
 
 
 
