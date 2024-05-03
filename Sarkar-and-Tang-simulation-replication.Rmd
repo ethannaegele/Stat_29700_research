@@ -329,6 +329,30 @@ create_sdp_knockoffs <- function(X, randomize=FALSE) {
 ```
 
 
+# Modified function - Equicorrelated with multiplier to try and have a better conditioned matrix
+
+```{r}
+create_equicorrelated_mult <- function(X, multiplier=2) {
+  # Compute SVD and U_perp.
+  X.svd = decompose(X)
+  if (any(X.svd$d <= 1e-5 * max(X.svd$d)))
+    stop(paste('Data matrix is rank deficient.',
+               'Equicorrelated knockoffs will have no power.'))
+  lambda_min = min(X.svd$d)^2
+  s = min(multiplier*lambda_min, 1)
+  D <- diag(rep(s, times = ncol(X))) # I am constructing the diagonal matrix from the obtained s, as required in the formulas
+  
+  # Construct the knockoff according to Equation 1.4.
+  s_diff = pmax(0, 2*s - (s/X.svd$d)^2) # can be negative due to numerical error
+  X_ko = (X.svd$u %*diag% (X.svd$d - s / X.svd$d) +
+            X.svd$u_perp %*diag% sqrt(s_diff)) %*% t(X.svd$v)
+  list(D = D, Xk = X_ko)
+}
+```
+
+
+
+
 
 
 
@@ -401,48 +425,18 @@ create_equicorrelated_knockoffsv2 <- function(X, randomize=FALSE){
 
 
 
-```{r}
-create_equicorrelated_knockoffs(regression$X)
-```
-
-```{r}
-create_equicorrelated_D(regression$X)
-```
-
-
-```{r}
-create.solve_equi(t(regression$X) %*% regression$X)
-```
 
 
 
-```{r}
-X_ko <- create.fixed(regression$X)$Xk
-#get_variance_parameter_estimate(cbind(regression$X, X_ko), regression$Y)
-X_temp <- cbind(regression$X, X_ko)
-solve(t(X_temp) %*% X_temp)
-```
-
-```{r}
-get_variance_parameter_estimate(X_temp, regression$Y)
-```
 
 
-```{r}
-get_T_1(regression$X, regression$Y)
-```
 
-```{r}
-get_T_2(regression$X, regression$Y)
-```
 
-```{r}
-results <- sarkar_tang_method1(regression$X, regression$Y, .05)
-```
 
-```{r}
-length(results)
-```
+
+
+
+
 
 ```{r}
 set.seed(12)
@@ -455,131 +449,12 @@ set.seed(12)
 ```
 
 
-```{r}
-regression <- get_regression_model(n = 200, d = 30, a = 2, num_true_signals = 1)
-#get_T_1(regression$X, regression$Y)
-#get_T_2(regression$X, regression$Y)
-```
-
-```{r}
-set.seed(12)
-X_ko <- create.fixed(regression$X, method = 'sdp')$Xk
-X_temp <- cbind(regression$X, X_ko)
-rcond(t(X_temp) %*% X_temp)
-qr_decomp <- qr(t(X_temp) %*% X_temp)
-solve(qr.R(qr_decomp), qr.Q(qr_decomp))
-```
-
-```{r}
-library(pracma)
-```
-
-```{r}
-inv(t(X_temp) %*% X_temp)
-```
-
-```{r}
-X <- matrix(runif(100), ncol=5)  # 20 observations, 5 predictors
-Y <- rnorm(20)  # 20 observations
-
-# Fit the model
-estimate <- get_variance_parameter_estimate(X, Y)
-
-# Print the summary of the model
-estimate
-```
-
-```{r}
-fit_linear_model <- function(X, Y) {
-  # Ensure Y is a vector and has appropriate length
-  if (!is.vector(Y) || length(Y) != nrow(X)) {
-    stop("Y must be a vector and match the number of rows in X")
-  }
-  
-  # Assign names to columns of X if not already named
-  if (is.null(colnames(X))) {
-    colnames(X) <- paste("Var", 1:ncol(X), sep="")
-  }
-  
-  # Convert X to a data frame
-  df_X <- as.data.frame(X)
-  
-  # Add Y to the dataframe
-  df_X$Y <- Y
-  
-  # Dynamically create the formula
-  predictor_names <- names(df_X)[names(df_X) != "Y"]
-  formula_string <- paste("Y ~", paste(predictor_names, collapse = " + "))
-  
-  # Fit the model using the formula
-  model <- lm(formula_string, data=df_X)
-  
-  # Return the fitted model
-  return(model)
-}
-
-# Example usage:
-# Assume X is your matrix with predictors and Y is your response vector
-X <- matrix(runif(100), ncol=5)  # 20 observations, 5 predictors
-Y <- rnorm(20)  # 20 observations
-
-# Fit the model
-model <- fit_linear_model(X, Y)
-
-# Print the summary of the model
-summary(model)
-
-```
-
-```{r}
-# evidence that fitting the model via the built in R function to estimate the variance results in successful calculation, even when the matrix X^T X appears to be computationally singular
-set.seed(12)
-X_ko <- create.fixed(regression$X, method = 'sdp')$Xk
-X_temp <- cbind(regression$X, X_ko)
-get_variance_parameter_estimate(regression$X, as.vector(regression$Y))
-inv(t(X_temp) %*% X_temp)
-```
 
 
 
-```{r}
-set.seed(12)
-regression <- get_regression_model(n = 200, d = 30, a = 2, num_true_signals = 10)
-result <- get_T_1(regression$X, regression$Y)
-#get_T_2(regression$X, regression$Y)
-```
-
-
-```{r}
-result
-```
-
-```{r}
-diag(diag(result))
-```
-
-```{r}
-solve(diag(diag(result)))
-```
 
 
 
-```{r}
-is_posdef(result) # 2 * sigma - D should be positive definite, is not
-```
-
-```{r}
-is_posdef(solve(diag(diag(result))))
-```
-
-```{r}
-sqrtm(solve(diag(diag(result))))$B %*% sqrtm(solve(diag(diag(result))))$B
-```
-
-
-```{r}
-sqrtm(solve(diag(diag(result))))$Binv
-```
 
 ```{r}
 get_variance_parameter_estimate(cbind(regression$X, create.fixed(regression$X, method = 'sdp')$Xk), regression$Y)
@@ -590,17 +465,11 @@ create.solve_equi(t(regression$X) %*% regression$X)
 ```
 
 
-```{r}
-create_equicorrelated_D(regression$X)
-```
 
-```{r}
-get_T_1(regression$X, regression$Y)
-```
 
-```{r}
-get_T_1(regression$X, regression$Y)
-```
+
+
+
 
 ```{r}
 set.seed(12)
@@ -629,6 +498,47 @@ for (m in 1:20) {
 mean(vec)
 
 ```
+
+
+
+
+```{r}
+set.seed(12)
+regression <- get_regression_model(n = 200, d = 40, a = 2, num_true_signals = 8)
+
+```
+
+```{r}
+set.seed(12)
+vec_equi <- c()
+vec_equi_mult <- c()
+for (m in 1:50) {
+  num_true_signals <- 8
+  d <- 40
+  regression <- get_regression_model(n = 200, d = d, a = 6, num_true_signals = num_true_signals)
+  vec_equi <- c(vec_equi, condition_number_test_equi(regression$X))
+  vec_equi_mult <- c(vec_equi_mult, condition_number_test_equi_mult(regression$X, multiplier = 1.99))
+}
+mean(vec_equi)
+mean(vec_equi_mult)
+
+```
+
+We see from using the modified function that the modified results in a much better behaving matrix.
+
+```{r}
+vec_equi
+vec_equi_mult
+```
+
+```{r}
+set.seed(12)
+regression <- get_regression_model(n = 200, d = d, a = 6, num_true_signals = num_true_signals)
+equi_solution <- create.solve_equi(t(regression$X) %*% regression$X)
+result <- create.fixed(regression$X, method = 'equi')
+result_mult <- create_equicorrelated_mult(regression$X, multiplier = 2)
+```
+
 
 
 

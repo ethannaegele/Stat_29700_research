@@ -31,29 +31,21 @@ get_variance_parameter_estimate <- function(X, Y){
    # stop("Y must be a vector and match the number of rows in X")
  # }
   
-  # Assign names to columns of X if not already named
-  if (is.null(colnames(X))) {
-    colnames(X) <- paste("Var", 1:ncol(X), sep="")
-  }
-  
   # Convert X to a data frame
   df_X <- as.data.frame(X)
   
   # Add Y to the dataframe
   df_X$Y <- Y
   
-  # Dynamically create the formula
-  predictor_names <- names(df_X)[names(df_X) != "Y"]
-  formula_string <- paste("Y ~", paste(predictor_names, collapse = " + "))
-  
   # Fit the model using the formula
-  model <- lm(formula_string, data=df_X)
-  #tau_hat_squared <- (norm_vec(Y - X %*% solve(t(X) %*% X) %*% t(X) %*% Y))^2 / (n - d) # numerator is RSS, and assuming n > d
+  model <- lm(Y ~ ., data=df_X)
   residuals_sum_sq <- deviance(model)
   return(sqrt(residuals_sum_sq / (n - d)))
-  #return(sqrt(tau_hat_squared))
 }
 ```
+
+
+
 
 
 
@@ -198,6 +190,15 @@ condition_number_test_sdp <- function(X){
 condition_number_test_equi <- function(X){
   sigma <- t(X) %*% X
   D <- diag(create.solve_equi(sigma))
+  return(rcond(2 * sigma - D))
+}
+```
+
+```{r}
+# testing the condition number obtained from using the multiplier version of equicorrelated knockoffs
+condition_number_test_equi_mult <- function(X, multiplier = 2){
+  sigma <- t(X) %*% X
+  D <- create_equicorrelated_mult(X, multiplier = multiplier)$D
   return(rcond(2 * sigma - D))
 }
 ```
