@@ -54,8 +54,9 @@ get_variance_parameter_estimate <- function(X, Y){
 # SQRTM USES THE PRACMA VERSION HERE CURRENTLY
 get_T_1 <- function(X, Y){
   sigma <- t(X) %*% X
-  D <- diag(create.solve_equi(sigma)) # need to turn the output into a diagonal matrix
-  X_ko <- create.fixed(X, method = 'equi')$Xk
+  equi <- create_equicorrelated_mult(X, multiplier = 1.98) # TRYING TO USE THE MODIFIED FUNCTION FOR BETTER MATRIX CONDITION
+  D <- equi$D # need to turn the output into a diagonal matrix
+  X_ko <- equi$Xk
   beta_hat_1 <- solve(2 * sigma - D) %*% t(X + X_ko) %*% Y
   # tau hat estimated with the columnwise concatenation of X and knockoff X
   T_1 <- (1 / (get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2))) *
@@ -203,12 +204,89 @@ condition_number_test_equi_mult <- function(X, multiplier = 2){
 }
 ```
 
+# Simulations for Method 1
 
+First, run the simulations
+
+## Running the simulations
+
+```{r}
+run_method1_simulation <- function(n, d, a, num_true_sigs, num_iter = 300){
+  # Sets up the regression problem with specified dimensions and number of true signals, all of which have
+  # the same amplitude. 
+  fdp_vec <- numeric(num_iter)
+pwr_vec <- c(num_iter)
+for (m in 1:num_iter){
+  feature_indices <- 1:d
+  regression <- get_regression_model(n = n, d = d, a = a, num_true_signals = num_true_sigs)
+  true_nonzero_indices <- regression$nonzero_indices
+  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .05)
+  num_rejections <- length(rejected_indices)
+  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
+  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
+  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
+  pwr_vec[m] <- num_correct_rejections / max(true_nonzero_indices, 1)
+}
+fdr <- mean(fdp_vec)
+pwr <- mean(pwr_vec)
+return(list(fdr = fdr, power = pwr))
+}
+```
+
+```{r}
+set.seed(12)
+run_method1_simulation(n = 200, d = 40, a = 8, num_true_sigs = 8, num_iter = 300)
+```
+```{r}
+set.seed(12)
+# running setting 1 as specified in the paper
+result_vec_power_method1_setting1 <- c()
+result_vec_fdr_method1_setting1 <- c()
+for (amp in c(2, 4, 6, 8, 10)){
+  result <- run_method1_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8, 
+                                          num_iter = 500)
+  result_vec_power_method1_setting1 <- c(result_vec_power_method1_setting1, result$power)
+  result_vec_fdr_method1_setting1<- c(result_vec_fdr_method1_setting1, result$fdr)
+}
+
+```
+
+
+```{r}
+method1_setting1 <- data.frame(a = c(2, 4, 6, 8, 10), 
+                                         power = result_vec_power_method1_setting1, 
+                                         fdr = result_vec_fdr_method1_setting1)
+```
+
+
+## Method 1 Graphs
+
+```{r}
+ggplot(method1_setting1, aes(x = a, y = power)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated Power', title = 'Setting 1 Results (n = 200, d = 40, k = 8)')
+```
+
+
+```{r}
+ggplot(method1_setting1, aes(x = a, y = fdr)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, .15)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated FDR', title = 'Setting 1 Results (n = 200, d = 40, k = 8)')
+```
 
 # BH using the independent vector only 
 
 
 using $\hat{\beta}_2$ only
+
+## Running the simulations
 
 
 ```{r}
@@ -274,33 +352,7 @@ fdr
 pwr
 ```
 
-```{r}
-run_method1_simulation <- function(n, d, a, num_true_sigs, num_iter = 300){
-  # Sets up the regression problem with specified dimensions and number of true signals, all of which have
-  # the same amplitude. 
-  fdp_vec <- numeric(num_iter)
-pwr_vec <- c(num_iter)
-for (m in 1:num_iter){
-  feature_indices <- 1:d
-  regression <- get_regression_model(n = n, d = d, a = a, num_true_signals = num_true_sigs)
-  true_nonzero_indices <- regression$nonzero_indices
-  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .05)
-  num_rejections <- length(rejected_indices)
-  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
-  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
-  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
-  pwr_vec[m] <- num_correct_rejections / max(true_nonzero_indices, 1)
-}
-fdr <- mean(fdp_vec)
-pwr <- mean(pwr_vec)
-return(list(fdr = fdr, power = pwr))
-}
-```
 
-```{r}
-set.seed(12)
-run_method1_simulation(n = 200, d = 40, a = 8, num_true_sigs = 8, num_iter = 300)
-```
 
 ```{r}
 run_independent_BH_simulation <- function(n, d, a, num_true_sigs, num_iter = 300){
@@ -377,6 +429,9 @@ independent_BH_setting2 <- data.frame(a = c(2, 4, 6, 8, 10),
                                          power = result_vec_power_independent_BH_setting2, 
                                          fdr = result_vec_fdr_independent_BH_setting2)
 ```
+
+
+## Graphs for Independent BH
 
 
 ```{r}

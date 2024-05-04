@@ -517,7 +517,7 @@ for (m in 1:50) {
   d <- 40
   regression <- get_regression_model(n = 200, d = d, a = 6, num_true_signals = num_true_signals)
   vec_equi <- c(vec_equi, condition_number_test_equi(regression$X))
-  vec_equi_mult <- c(vec_equi_mult, condition_number_test_equi_mult(regression$X, multiplier = 1.99))
+  vec_equi_mult <- c(vec_equi_mult, condition_number_test_equi_mult(regression$X, multiplier = 1.98))
 }
 mean(vec_equi)
 mean(vec_equi_mult)
@@ -526,19 +526,28 @@ mean(vec_equi_mult)
 
 We see from using the modified function that the modified results in a much better behaving matrix.
 
-```{r}
-vec_equi
-vec_equi_mult
-```
+How different is the matrix?
+
+
+
+
 
 ```{r}
 set.seed(12)
 regression <- get_regression_model(n = 200, d = d, a = 6, num_true_signals = num_true_signals)
 equi_solution <- create.solve_equi(t(regression$X) %*% regression$X)
 result <- create.fixed(regression$X, method = 'equi')
-result_mult <- create_equicorrelated_mult(regression$X, multiplier = 2)
+result_mult <- create_equicorrelated_mult(regression$X, multiplier = 1.98)
+```
+
+```{r}
+result$Xk
 ```
 
 
+```{r}
+result_mult$Xk
+```
 
+it's pretty close.
 
