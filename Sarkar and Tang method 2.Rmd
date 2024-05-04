@@ -1,0 +1,50 @@
+---
+title: "Sarkar and Tang method 2"
+author: "Ethan Naegele"
+date: "2024-05-04"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Method 2 from Sarkar and Tang
+
+```{r}
+sarkar_tang_method1 <- function(X, Y, alpha, eta){
+  d <- ncol(X)
+  nu <- nrow(X) - 2 * d # n - 2d assuming n > 2d
+  T1 <- get_T_1(X, Y)
+  T2 <- get_T_2(X, Y)
+  P_t1 <- pf(T1^2, 1, nu, lower.tail = FALSE) # to calculate probabilities with the t^2_n distribution, have to use the F(1, n) distribution
+  P_t2 <- pf(T2^2, 1, nu, lower.tail = FALSE)
+  pi_0 <- (d - sum(as.numeric(P_t2 <= eta)) + 1) / (d * (1 - eta)) # Storey-type null proportion estimate in Step 2, Method 2
+  P_star <- numeric(d)
+  for (j in 1:d){
+    if (P_t1[j] > sqrt(alpha)){
+      P_star[j] <- 1
+    }
+    else{
+      P_star[j] <- P_t2[j]
+    }
+  }
+  P_tilde_BH <- p.adjust(P_tilde, method = "BH")
+  rejected_indices <- which(P_tilde_BH <= sqrt(alpha))
+  return(rejected_indices) # the indices of the features that the test concludes are nonzero
+  
+}
+```
+
+
+```{r}
+v <- c(3, 4, 5, 8, 7)
+sum(as.numeric(v < 6))
+```
+
+
+
+
+
+
