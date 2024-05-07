@@ -17,9 +17,9 @@ ep_BH <- function(p_values, e_values, alpha = .05){
   # e_values is a vector of e values
   # p_values and e_values must be of the same length.
   # Weights each p value by its corresponding e value and then runs BH on the weighted p values at level alpha.
-  P_star <- p_values / e_values
-  P_star_BH <- p.adjust(P_star, method = 'BH')
-  rejected_indices <- which(P_star_BH <= alpha)
+  Q <- pmin(p_values / e_values, 1)
+  Q_BH <- p.adjust(Q, method = 'BH')
+  rejected_indices <- which(Q_BH <= alpha)
   return(rejected_indices)
 }
 ```
@@ -38,9 +38,7 @@ ep_sarkar_tang_method1 <- function(X, Y, alpha = .05, exponent = .5){
   P_t1 <- pf(T1^2, 1, nu, lower.tail = FALSE) # to calculate probabilities with the t^2_n distribution, have to use the F(1, n) distribution
   P_t2 <- pf(T2^2, 1, nu, lower.tail = FALSE)
   E <- as.numeric(P_t1 <= alpha^exponent) / (alpha^exponent) # vector of e values
-  Q <- pmin(P_t2 / E, 1) # combining the p values and e values as specified in the ep BH paper
-  Q_BH <- p.adjust(Q, method = 'BH')
-  rejected_indices <- which(Q_BH <= alpha)
+  rejected_indices <- ep_BH(P_t2, E, alpha = alpha) # run ep BH at level alpha
   return(rejected_indices)
 }
 ```
@@ -52,7 +50,217 @@ ep_sarkar_tang_method1(regression$X, regression$Y, exponent = .5)
 sarkar_tang_method1(regression$X, regression$Y, alpha = .05)
 ```
 
+```{r}
+run_ep_method1_simulation <- function(n, d, a, num_true_sigs, alpha = .05, exponent = .5, num_iter = 300){
+  # Sets up the regression problem with specified dimensions and number of true signals, all of which have
+  # the same amplitude. 
+  fdp_vec <- numeric(num_iter)
+pwr_vec <- c(num_iter)
+for (m in 1:num_iter){
+  feature_indices <- 1:d
+  regression <- get_regression_model(n = n, d = d, a = a, num_true_signals = num_true_sigs)
+  true_nonzero_indices <- regression$nonzero_indices
+  rejected_indices <- ep_sarkar_tang_method1(regression$X, regression$Y, alpha = .05, exponent = exponent)
+  num_rejections <- length(rejected_indices)
+  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
+  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
+  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
+  pwr_vec[m] <- num_correct_rejections / max(length(true_nonzero_indices), 1)
+}
+fdr <- mean(fdp_vec)
+pwr <- mean(pwr_vec)
+return(list(fdr = fdr, power = pwr))
+}
+```
+
+# Running the experiments for Method 1
+
+method 1 experiments
+
+## Setting 1 experiments - different exponents
+
+```{r}
+set.seed(12)
+# running setting 1 as specified in the paper
+result_vec_power_ep_method1_1_4_setting1 <- c()
+result_vec_fdr_ep_method1_1_4_setting1 <- c()
+for (amp in c(2, 4, 6, 8, 10)){
+  result <- run_ep_method1_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          alpha = .05,
+                                          exponent = 1/4,
+                                          num_iter = 500)
+  result_vec_power_ep_method1_1_4_setting1 <- c(result_vec_power_ep_method1_1_4_setting1, result$power)
+  result_vec_fdr_ep_method1_1_4_setting1<- c(result_vec_fdr_ep_method1_1_4_setting1, result$fdr)
+}
+
+```
 
 
 
+```{r}
+ep_method1_1_4_setting1 <- data.frame(a = c(2, 4, 6, 8, 10), 
+                                         power = result_vec_power_ep_method1_1_4_setting1, 
+                                         fdr = result_vec_fdr_ep_method1_1_4_setting1)
+```
 
+```{r}
+set.seed(12)
+# running setting 1 as specified in the paper
+result_vec_power_ep_method1_1_8_setting1 <- c()
+result_vec_fdr_ep_method1_1_8_setting1 <- c()
+for (amp in c(2, 4, 6, 8, 10)){
+  result <- run_ep_method1_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          alpha = .05,
+                                          exponent = 1/8,
+                                          num_iter = 500)
+  result_vec_power_ep_method1_1_8_setting1 <- c(result_vec_power_ep_method1_1_8_setting1, result$power)
+  result_vec_fdr_ep_method1_1_8_setting1<- c(result_vec_fdr_ep_method1_1_8_setting1, result$fdr)
+}
+
+```
+
+
+```{r}
+ep_method1_1_8_setting1 <- data.frame(a = c(2, 4, 6, 8, 10), 
+                                         power = result_vec_power_ep_method1_1_8_setting1, 
+                                         fdr = result_vec_fdr_ep_method1_1_8_setting1)
+```
+
+```{r}
+set.seed(12)
+# running setting 1 as specified in the paper
+result_vec_power_ep_method1_1_16_setting1 <- c()
+result_vec_fdr_ep_method1_1_16_setting1 <- c()
+for (amp in c(2, 4, 6, 8, 10)){
+  result <- run_ep_method1_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          alpha = .05,
+                                          exponent = 1/16,
+                                          num_iter = 500)
+  result_vec_power_ep_method1_1_16_setting1 <- c(result_vec_power_ep_method1_1_16_setting1, result$power)
+  result_vec_fdr_ep_method1_1_16_setting1<- c(result_vec_fdr_ep_method1_1_16_setting1, result$fdr)
+}
+
+```
+
+```{r}
+ep_method1_1_16_setting1 <- data.frame(a = c(2, 4, 6, 8, 10), 
+                                         power = result_vec_power_ep_method1_1_16_setting1, 
+                                         fdr = result_vec_fdr_ep_method1_1_16_setting1)
+```
+
+
+```{r}
+set.seed(12)
+# running setting 1 as specified in the paper
+result_vec_power_ep_method1_3_4_setting1 <- c()
+result_vec_fdr_ep_method1_3_4_setting1 <- c()
+for (amp in c(2, 4, 6, 8, 10)){
+  result <- run_ep_method1_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          alpha = .05,
+                                          exponent = 3/4,
+                                          num_iter = 500)
+  result_vec_power_ep_method1_3_4_setting1 <- c(result_vec_power_ep_method1_3_4_setting1, result$power)
+  result_vec_fdr_ep_method1_3_4_setting1<- c(result_vec_fdr_ep_method1_3_4_setting1, result$fdr)
+}
+
+```
+
+
+```{r}
+ep_method1_3_4_setting1 <- data.frame(a = c(2, 4, 6, 8, 10), 
+                                         power = result_vec_power_ep_method1_3_4_setting1, 
+                                         fdr = result_vec_fdr_ep_method1_3_4_setting1)
+```
+
+
+# Graphs for ep Method 1 Setting 1
+
+
+```{r}
+# Setting 1 Power
+ggplot(ep_method1_3_4_setting1, aes(x = a, y = power)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated Power', title = 'ep Method 1 Setting 1 Results - exponent = 3/4 (n = 200, d = 40, k = 8)')
+```
+
+```{r}
+# Setting 1 FDR
+ggplot(ep_method1_3_4_setting1, aes(x = a, y = fdr)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, .15)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated FDR', title = 'ep Method 1 Setting 1 Results - exponent = 3/4 (n = 200, d = 40, k = 8)')
+```
+
+
+```{r}
+# Setting 1 Power
+ggplot(ep_method1_1_4_setting1, aes(x = a, y = power)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated Power', title = 'ep Method 1 Setting 1 Results - exponent = 1/4 (n = 200, d = 40, k = 8)')
+```
+
+
+```{r}
+# Setting 1 FDR
+ggplot(ep_method1_1_4_setting1, aes(x = a, y = fdr)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, .15)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated FDR', title = 'ep Method 1 Setting 1 Results - exponent = 1/4 (n = 200, d = 40, k = 8)')
+```
+
+
+```{r}
+# Setting 1 Power
+ggplot(ep_method1_1_8_setting1, aes(x = a, y = power)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated Power', title = 'ep Method 1 Setting 1 Results - exponent = 1/8 (n = 200, d = 40, k = 8)')
+```
+
+
+```{r}
+# Setting 1 FDR
+ggplot(ep_method1_1_8_setting1, aes(x = a, y = fdr)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, .15)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated FDR', title = 'ep Method 1 Setting 1 Results - exponent = 1/8 (n = 200, d = 40, k = 8)')
+```
+
+
+```{r}
+# Setting 1 Power
+ggplot(ep_method1_1_16_setting1, aes(x = a, y = power)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated Power', title = 'ep Method 1 Setting 1 Results - exponent = 1/16 (n = 200, d = 40, k = 8)')
+```
+
+```{r}
+# Setting 1 FDR
+ggplot(ep_method1_1_16_setting1, aes(x = a, y = fdr)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, .15)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated FDR', title = 'ep Method 1 Setting 1 Results - exponent = 1/16 (n = 200, d = 40, k = 8)')
+```
