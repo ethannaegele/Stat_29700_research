@@ -23,7 +23,7 @@ knockoff_procedure <- function(X, Y, alpha = .05, method = 'equi'){
   #return(kept_feature_indices)
   return(knockoff.filter(X, 
                 as.vector(Y), 
-                knockoffs = function(Z) create.fixed(Z, method = 'equi'), 
+                knockoffs = function(Z) create.fixed(Z, method = method), 
                 statistic = stat.lasso_lambdasmax,
                 fdr = alpha,
                 offset = 1)$selected)
@@ -63,7 +63,7 @@ result$selected
 
 
 ```{r}
-run_knockoffs_simulation <- function(n, d, a, num_true_sigs, alpha, num_iter = 300){
+run_knockoffs_simulation <- function(n, d, a, num_true_sigs, alpha = .05, num_iter = 300){
   # Sets up the regression problem with specified dimensions and number of true signals, all of which have
   # the same amplitude. 
   # Runs the simulation by generating the regression problems and then runs fixed X knockoffs as described in Barber and Candes.
@@ -90,6 +90,156 @@ pwr <- mean(pwr_vec)
 return(list(fdr = fdr, power = pwr))
 }
 ```
+
+
+# Running the simulations with knockoffs
+
+```{r}
+set.seed(12)
+# running setting 1 as specified in the paper
+result_vec_power_knockoffs_setting1 <- c()
+result_vec_fdr_knockoffs_setting1 <- c()
+for (amp in c(2, 4, 6, 8, 10)){
+  result <- run_knockoffs_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          alpha = .05,
+                                          num_iter = 500)
+  result_vec_power_knockoffs_setting1 <- c(result_vec_power_knockoffs_setting1, result$power)
+  result_vec_fdr_knockoffs_setting1<- c(result_vec_fdr_knockoffs_setting1, result$fdr)
+}
+
+```
+
+
+```{r}
+knockoffs_setting1 <- data.frame(a = c(2, 4, 6, 8, 10), 
+                                         power = result_vec_power_knockoffs_setting1, 
+                                         fdr = result_vec_fdr_knockoffs_setting1)
+```
+
+
+
+```{r}
+set.seed(12)
+# running setting 2 as specified in the paper
+result_vec_power_knockoffs_setting2 <- c()
+result_vec_fdr_knockoffs_setting2 <- c()
+for (amp in c(2, 4, 6, 8, 10)){
+  result <- run_knockoffs_simulation(n = 500,
+                                          d = 50,
+                                          a = amp, 
+                                          num_true_sigs = 10, 
+                                          alpha = .05,
+                                          num_iter = 500)
+  result_vec_power_knockoffs_setting2 <- c(result_vec_power_knockoffs_setting2, result$power)
+  result_vec_fdr_knockoffs_setting2<- c(result_vec_fdr_knockoffs_setting2, result$fdr)
+}
+
+```
+
+```{r}
+knockoffs_setting2 <- data.frame(a = c(2, 4, 6, 8, 10), 
+                                         power = result_vec_power_knockoffs_setting2, 
+                                         fdr = result_vec_fdr_knockoffs_setting2)
+```
+
+```{r}
+set.seed(12)
+# running setting 3 as specified in the paper
+result_vec_power_knockoffs_setting3 <- c()
+result_vec_fdr_knockoffs_setting3 <- c()
+for (amp in c(2, 4, 6, 8, 10)){
+  result <- run_knockoffs_simulation(n = 1000,
+                                          d = 100,
+                                          a = amp, 
+                                          num_true_sigs = 20,
+                                          alpha = .05,
+                                          num_iter = 500)
+  result_vec_power_knockoffs_setting3 <- c(result_vec_power_knockoffs_setting3, result$power)
+  result_vec_fdr_knockoffs_setting3 <- c(result_vec_fdr_knockoffs_setting3, result$fdr)
+}
+
+```
+
+
+```{r}
+knockoffs_setting3 <- data.frame(a = c(2, 4, 6, 8, 10), 
+                                         power = result_vec_power_knockoffs_setting3, 
+                                         fdr = result_vec_fdr_knockoffs_setting3)
+```
+
+
+
+
+# Graphs for knockoffs
+
+
+```{r}
+# Setting 1 Power
+ggplot(knockoffs_setting1, aes(x = a, y = power)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated Power', title = 'Knockoffs Setting 1 Results (n = 200, d = 40, k = 8)')
+```
+
+
+
+```{r}
+# Setting 1 FDR
+ggplot(knockoffs_setting1, aes(x = a, y = fdr)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, .15)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated FDR', title = 'Knockoffs Setting 1 Results (n = 200, d = 40, k = 8)')
+```
+
+
+```{r}
+# Setting 2 power
+ggplot(knockoffs_setting2, aes(x = a, y = power)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated Power', title = 'Knockoffs Setting 2 Results (n = 500, d = 50, k = 10)')
+```
+
+
+
+```{r}
+# Setting 2 FDR
+ggplot(knockoffs_setting2, aes(x = a, y = fdr)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, .15)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated FDR', title = 'Knockoffs Setting 2 Results (n = 500, d = 50, k = 10)')
+```
+
+
+```{r}
+# Setting 3 power
+ggplot(knockoffs_setting3, aes(x = a, y = power)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated Power', title = 'Knockoffs Setting 3 Results (n = 1000, d = 100, k = 20)')
+```
+
+
+```{r}
+# Setting 3 FDR
+ggplot(knockoffs_setting3, aes(x = a, y = fdr)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, .15)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated FDR', title = 'Knockoffs Setting 3 Results (n = 1000, d = 100, k = 20)')
+```
+
+
+
+
 
 
 
