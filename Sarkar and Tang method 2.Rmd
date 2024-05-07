@@ -62,10 +62,6 @@ return(list(fdr = fdr, power = pwr))
 ```
 
 
-```{r}
-set.seed(12)
-run_method2_simulation(n = 200, d = 40, a = 6, num_true_sigs = 8, eta = .8, num_iter = 100)
-```
 
 ## Running method 2 simulations
 
@@ -116,7 +112,7 @@ for (amp in c(2, 4, 6, 8, 10)){
 
 
 ```{r}
-method1_setting2 <- data.frame(a = c(2, 4, 6, 8, 10), 
+method2_setting2 <- data.frame(a = c(2, 4, 6, 8, 10), 
                                          power = result_vec_power_method2_setting2, 
                                          fdr = result_vec_fdr_method2_setting2)
 ```
@@ -139,6 +135,13 @@ for (amp in c(2, 4, 6, 8, 10)){
   result_vec_fdr_method2_setting3 <- c(result_vec_fdr_method2_setting3, result$fdr)
 }
 
+```
+
+
+```{r}
+method2_setting3 <- data.frame(a = c(2, 4, 6, 8, 10), 
+                                         power = result_vec_power_method2_setting3, 
+                                         fdr = result_vec_fdr_method2_setting3)
 ```
 
 
@@ -175,6 +178,35 @@ ggplot(method2_setting2, aes(x = a, y = power)) +
   labs(x = 'Signal Strength - Amplitude', y = 'Simulated Power', title = 'Method 2 Setting 2 Results (n = 500, d = 50, k = 10)')
 ```
 
+
+```{r}
+# Setting 2 FDR
+ggplot(method2_setting2, aes(x = a, y = fdr)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, .15)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated FDR', title = 'Method 2 Setting 2 Results (n = 500, d = 50, k = 10)')
+```
+
+
+```{r}
+# Setting 3 Power
+ggplot(method2_setting3, aes(x = a, y = power)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated Power', title = 'Method 2 Setting 3 Results (n = 1000, d = 100, k = 20)')
+```
+
+
+```{r}
+# Setting 3 FDR
+ggplot(method2_setting3, aes(x = a, y = fdr)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, .15)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated FDR', title = 'Method 2 Setting 3 Results (n = 1000, d = 100, k = 20)')
+```
 
 
 
