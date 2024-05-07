@@ -1,0 +1,58 @@
+---
+title: "ep BH"
+author: "Ethan Naegele"
+date: "2024-05-07"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# ep BH procedure
+
+```{r}
+ep_BH <- function(p_values, e_values, alpha = .05){
+  # p_values is a vector of p values
+  # e_values is a vector of e values
+  # p_values and e_values must be of the same length.
+  # Weights each p value by its corresponding e value and then runs BH on the weighted p values at level alpha.
+  P_star <- p_values / e_values
+  P_star_BH <- p.adjust(P_star, method = 'BH')
+  rejected_indices <- which(P_star_BH <= alpha)
+  return(rejected_indices)
+}
+```
+
+
+
+# Generalized Sarkar and Tang method
+
+
+```{r}
+ep_sarkar_tang_method1 <- function(X, Y, alpha = .05, exponent = .5){
+  d <- ncol(X)
+  nu <- nrow(X) - 2 * d # n - 2d assuming n > 2d
+  T1 <- get_T_1(X, Y)
+  T2 <- get_T_2(X, Y)
+  P_t1 <- pf(T1^2, 1, nu, lower.tail = FALSE) # to calculate probabilities with the t^2_n distribution, have to use the F(1, n) distribution
+  P_t2 <- pf(T2^2, 1, nu, lower.tail = FALSE)
+  E <- as.numeric(P_t1 <= alpha^exponent) / (alpha^exponent) # vector of e values
+  Q <- pmin(P_t2 / E, 1) # combining the p values and e values as specified in the ep BH paper
+  Q_BH <- p.adjust(Q, method = 'BH')
+  rejected_indices <- which(Q_BH <= alpha)
+  return(rejected_indices)
+}
+```
+
+```{r}
+# these functions agree when the exponent is .5, as they should
+regression <- get_regression_model(n= 500, d = 100, a = 5, num_true_signals = 20)
+ep_sarkar_tang_method1(regression$X, regression$Y, exponent = .5)
+sarkar_tang_method1(regression$X, regression$Y, alpha = .05)
+```
+
+
+
+
+

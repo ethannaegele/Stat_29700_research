@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Method 2 from Sarkar and Tang
 
 ```{r}
-sarkar_tang_method2 <- function(X, Y, alpha, eta){
+sarkar_tang_method2 <- function(X, Y, alpha = .05, eta = .7){
   d <- ncol(X)
   nu <- nrow(X) - 2 * d # n - 2d assuming n > 2d
   T1 <- get_T_1(X, Y)
