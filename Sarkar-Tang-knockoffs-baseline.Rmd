@@ -10,19 +10,60 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-knockoff_procedure <- function(X, Y, alpha = .05){
+knockoff_procedure <- function(X, Y, alpha = .05, method = 'equi'){
   # First, need to run create.fixed to get the knockoff matrix
   # Then, need to run the function stat.lasso_lambdasmax to generate the statistics
   # then, need to run knockoff.threshold to compute the knockoff threshold given the test statistics
   # Then, need to determine which variables to keep and which ones to exclude in the model (the ones above the threshold need to be kept in the model)
+  # method is either 'equi' or 'sdp'
+  #X_ko <- create.fixed(X, method = method)$Xk
+  #test_statistics <- stat.glmnet_lambdasmax(X, X_ko, as.vector(Y), family = 'gaussian')
+  #threshold <- knockoff.threshold(W = test_statistics, fdr = alpha, offset = 1) # offset 1 to run knockoff+
+  #kept_feature_indices <- which(test_statistics >= threshold) # indices of the features to keep in the model
+  #return(kept_feature_indices)
+  return(knockoff.filter(X, 
+                as.vector(Y), 
+                knockoffs = function(Z) create.fixed(Z, method = 'equi'), 
+                statistic = stat.lasso_lambdasmax,
+                fdr = alpha,
+                offset = 1)$selected)
   
 }
+```
+
+```{r}
+set.seed(12)
+regression <- get_regression_model(n= 1000, d = 100, a = 4, num_true_signals = 20)
+result <- knockoff.filter(regression$X, 
+                as.vector(regression$Y), 
+                knockoffs = function(X) create.fixed(X ,method = 'equi'), 
+                statistic = stat.lasso_lambdasmax,
+                fdr = .05,
+                offset = 1)
 ```
 
 
 
 ```{r}
-run_knockoffs_simulation <- function(n, d, a, num_true_sigs, eta = .7, num_iter = 300){
+
+regression <- get_regression_model(n= 1000, d = 100, a = 5, num_true_signals = 20)
+knockoff_procedure(regression$X, regression$Y)
+result <- knockoff.filter(regression$X, 
+                as.vector(regression$Y), 
+                knockoffs = function(X) create.fixed(X ,method = 'equi'), 
+                statistic = stat.lasso_lambdasmax,
+                fdr = .05,
+                offset = 1)
+result$selected
+```
+
+
+
+
+
+
+```{r}
+run_knockoffs_simulation <- function(n, d, a, num_true_sigs, alpha, num_iter = 300){
   # Sets up the regression problem with specified dimensions and number of true signals, all of which have
   # the same amplitude. 
   # Runs the simulation by generating the regression problems and then runs fixed X knockoffs as described in Barber and Candes.
@@ -34,12 +75,15 @@ for (m in 1:num_iter){
   feature_indices <- 1:d
   regression <- get_regression_model(n = n, d = d, a = a, num_true_signals = num_true_sigs)
   true_nonzero_indices <- regression$nonzero_indices
-  rejected_indices <- sarkar_tang_method2(regression$X, regression$Y, alpha = .05, eta = eta)
+  rejected_indices <- knockoff_procedure(regression$X, 
+                                         regression$Y, 
+                                         alpha = alpha, 
+                                         method = 'equi')
   num_rejections <- length(rejected_indices)
   num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
   num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
   fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
-  pwr_vec[m] <- num_correct_rejections / max(true_nonzero_indices, 1)
+  pwr_vec[m] <- num_correct_rejections / max(length(true_nonzero_indices), 1)
 }
 fdr <- mean(fdp_vec)
 pwr <- mean(pwr_vec)

@@ -225,7 +225,7 @@ for (m in 1:num_iter){
   num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
   num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
   fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
-  pwr_vec[m] <- num_correct_rejections / max(true_nonzero_indices, 1)
+  pwr_vec[m] <- num_correct_rejections / max(length(true_nonzero_indices), 1)
 }
 fdr <- mean(fdp_vec)
 pwr <- mean(pwr_vec)
@@ -413,7 +413,7 @@ for (m in 1:num_iterations){
   num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
   num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
   fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
-  pwr_vec[m] <- num_correct_rejections / max(true_nonzero_indices, 1)
+  pwr_vec[m] <- num_correct_rejections / max(length(true_nonzero_indices), 1)
 }
 fdr <- mean(fdp_vec)
 pwr <- mean(pwr_vec)
