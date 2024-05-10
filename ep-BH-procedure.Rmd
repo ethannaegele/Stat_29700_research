@@ -82,6 +82,32 @@ method 1 experiments
 ```{r}
 set.seed(12)
 # running setting 1 as specified in the paper
+result_vec_power_ep_method1_0_setting1 <- c()
+result_vec_fdr_ep_method1_0_setting1 <- c()
+for (amp in c(2, 4, 6, 8, 10)){
+  result <- run_ep_method1_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          alpha = .05,
+                                          exponent = 0,
+                                          num_iter = 500)
+  result_vec_power_ep_method1_0_setting1 <- c(result_vec_power_ep_method1_0_setting1, result$power)
+  result_vec_fdr_ep_method1_0_setting1<- c(result_vec_fdr_ep_method1_0_setting1, result$fdr)
+}
+
+```
+
+
+```{r}
+ep_method1_0_setting1 <- data.frame(a = c(2, 4, 6, 8, 10), 
+                                         power = result_vec_power_ep_method1_0_setting1, 
+                                         fdr = result_vec_fdr_ep_method1_0_setting1)
+```
+
+```{r}
+set.seed(12)
+# running setting 1 as specified in the paper
 result_vec_power_ep_method1_1_4_setting1 <- c()
 result_vec_fdr_ep_method1_1_4_setting1 <- c()
 for (amp in c(2, 4, 6, 8, 10)){
@@ -178,6 +204,9 @@ for (amp in c(2, 4, 6, 8, 10)){
 ```
 
 
+
+
+
 ```{r}
 ep_method1_3_4_setting1 <- data.frame(a = c(2, 4, 6, 8, 10), 
                                          power = result_vec_power_ep_method1_3_4_setting1, 
@@ -185,7 +214,97 @@ ep_method1_3_4_setting1 <- data.frame(a = c(2, 4, 6, 8, 10),
 ```
 
 
+
+```{r}
+set.seed(12)
+# running setting 1 as specified in the paper
+result_vec_power_ep_method1_9_10_setting1 <- c()
+result_vec_fdr_ep_method1_9_10_setting1 <- c()
+for (amp in c(2, 4, 6, 8, 10)){
+  result <- run_ep_method1_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          alpha = .05,
+                                          exponent = 9/10,
+                                          num_iter = 500)
+  result_vec_power_ep_method1_9_10_setting1 <- c(result_vec_power_ep_method1_9_10_setting1, result$power)
+  result_vec_fdr_ep_method1_9_10_setting1<- c(result_vec_fdr_ep_method1_9_10_setting1, result$fdr)
+}
+
+```
+
+```{r}
+ep_method1_9_10_setting1 <- data.frame(a = c(2, 4, 6, 8, 10), 
+                                         power = result_vec_power_ep_method1_9_10_setting1, 
+                                         fdr = result_vec_fdr_ep_method1_9_10_setting1)
+```
+
+```{r}
+set.seed(12)
+# running setting 1 as specified in the paper
+result_vec_power_ep_method1_1_setting1 <- c()
+result_vec_fdr_ep_method1_1_setting1 <- c()
+for (amp in c(2, 4, 6, 8, 10)){
+  result <- run_ep_method1_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          alpha = .05,
+                                          exponent = 1,
+                                          num_iter = 500)
+  result_vec_power_ep_method1_1_setting1 <- c(result_vec_power_ep_method1_1_setting1, result$power)
+  result_vec_fdr_ep_method1_1_setting1<- c(result_vec_fdr_ep_method1_1_setting1, result$fdr)
+}
+
+```
+
+```{r}
+ep_method1_1_setting1 <- data.frame(a = c(2, 4, 6, 8, 10), 
+                                         power = result_vec_power_ep_method1_1_setting1, 
+                                         fdr = result_vec_fdr_ep_method1_1_setting1)
+```
+
+
+
+
 # Graphs for ep Method 1 Setting 1
+
+```{r}
+# Setting 1 Power
+ggplot(ep_method1_1_setting1, aes(x = a, y = power)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated Power', title = 'ep Method 1 Setting 1 Results - exponent = 1 (n = 200, d = 40, k = 8)')
+```
+
+```{r}
+# Setting 1 FDR
+ggplot(ep_method1_1_setting1, aes(x = a, y = fdr)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, .15)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated FDR', title = 'ep Method 1 Setting 1 Results - exponent = 3/4 (n = 200, d = 40, k = 8)')
+```
+
+```{r}
+# Setting 1 Power
+ggplot(ep_method1_9_10_setting1, aes(x = a, y = power)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated Power', title = 'ep Method 1 Setting 1 Results - exponent = 9/10 (n = 200, d = 40, k = 8)')
+```
+
+```{r}
+# Setting 1 FDR
+ggplot(ep_method1_9_10_setting1, aes(x = a, y = fdr)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, .15)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated FDR', title = 'ep Method 1 Setting 1 Results - exponent = 9/10 (n = 200, d = 40, k = 8)')
+```
 
 
 ```{r}
@@ -264,3 +383,23 @@ ggplot(ep_method1_1_16_setting1, aes(x = a, y = fdr)) +
   scale_y_continuous(limits = c(0, .15)) +
   labs(x = 'Signal Strength - Amplitude', y = 'Simulated FDR', title = 'ep Method 1 Setting 1 Results - exponent = 1/16 (n = 200, d = 40, k = 8)')
 ```
+
+
+```{r}
+# Setting 1 Power
+ggplot(ep_method1_0_setting1, aes(x = a, y = power)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, 1)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated Power', title = 'ep Method 1 Setting 1 Results - exponent = 0 (n = 200, d = 40, k = 8)')
+```
+
+```{r}
+# Setting 1 FDR
+ggplot(ep_method1_0_setting1, aes(x = a, y = fdr)) + 
+  geom_line(color = 'red') +
+  geom_point(shape = 4, color = 'red') + 
+  scale_y_continuous(limits = c(0, .15)) +
+  labs(x = 'Signal Strength - Amplitude', y = 'Simulated FDR', title = 'ep Method 1 Setting 1 Results - exponent = 0 (n = 200, d = 40, k = 8)')
+```
+
