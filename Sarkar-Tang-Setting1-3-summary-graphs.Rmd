@@ -1,0 +1,93 @@
+---
+title: "Settings 1-3 summary graphs"
+author: "Ethan Naegele"
+date: "2024-05-12"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Setting 1 summary graph across exponents
+
+```{r}
+# example for plotting multiple lines
+df1 <- data.frame(Time = 1:10, Value1 = rnorm(10, mean = 50))
+df2 <- data.frame(Time = 1:10, Value2 = rnorm(10, mean = 60))
+
+# Combine data frames by 'Time'
+combined_df <- full_join(df1, df2, by = "Time")
+long_df <- pivot_longer(combined_df, cols = c("Value1", "Value2"), names_to = "Variable", values_to = "Value")
+
+plot <- ggplot(long_df, aes(x = Time, y = Value, color = Variable)) +
+  geom_line() +
+  labs(title = "Multiple Line Plot from Different Data Frames", x = "Time", y = "Value") +
+  theme_minimal()
+print(plot)
+```
+
+
+
+
+```{r}
+combined_df_setting1 <- ep_method1_0_setting1 %>%
+  full_join(ep_method1_1_16_setting1 %>% rename(power_1_16 = power, fdr_1_16 = fdr), by = 'a') %>%
+  full_join(ep_method1_1_8_setting1 %>% rename(power_1_8 = power, fdr_1_8 = fdr), by = 'a') %>%
+  full_join(ep_method1_1_4_setting1 %>% rename(power_1_4 = power, fdr_1_4 = fdr), by = 'a') %>%
+  full_join(method1_setting1 %>% rename(power_1_2 = power, fdr_1_2 = fdr), by = 'a') %>% 
+  full_join(ep_method1_3_4_setting1 %>% rename(power_3_4 = power, fdr_3_4 = fdr), by = 'a') %>%
+  full_join(ep_method1_9_10_setting1 %>% rename(power_9_10 = power, fdr_9_10 = fdr), by = 'a') %>%
+  full_join(ep_method1_1_setting1 %>% rename(power_1 = power, fdr_1 = fdr), by = 'a')
+
+combined_df_setting1 <- combined_df_setting1 %>% 
+  rename(power_0 = power, fdr_0 = fdr)
+```
+
+```{r}
+combined_df_setting1$power_0 == ep_method1_0_setting1$power
+combined_df_setting1$power_1_16 == ep_method1_1_16_setting1$power
+combined_df_setting1$power_1_8 == ep_method1_1_8_setting1$power
+combined_df_setting1$power_1_4 == ep_method1_1_4_setting1$power
+combined_df_setting1$power_1_2 == method1_setting1$power
+combined_df_setting1$power_3_4 == ep_method1_3_4_setting1$power
+combined_df_setting1$power_9_10 == ep_method1_9_10_setting1$power
+combined_df_setting1$power_1 == ep_method1_1_setting1$power
+```
+
+```{r}
+combined_df_setting1$fdr_0 == ep_method1_0_setting1$fdr
+combined_df_setting1$fdr_1_16 == ep_method1_1_16_setting1$fdr
+combined_df_setting1$fdr_1_8 == ep_method1_1_8_setting1$fdr
+combined_df_setting1$fdr_1_4 == ep_method1_1_4_setting1$fdr
+combined_df_setting1$fdr_1_2 == method1_setting1$fdr
+combined_df_setting1$fdr_3_4 == ep_method1_3_4_setting1$fdr
+combined_df_setting1$fdr_9_10 == ep_method1_9_10_setting1$fdr
+combined_df_setting1$fdr_1 == ep_method1_1_setting1$fdr
+```
+
+```{r}
+long_df_power_setting1 <- pivot_longer(combined_df_setting1, cols = c("power_0", 
+                                                             "power_1_16",
+                                                             'power_1_8',
+                                                             'power_1_4',
+                                                             'power_1_2',
+                                                             'power_3_4',
+                                                             'power_9_10',
+                                                             'power_1'), 
+                                       names_to = "Exponent", 
+                                       values_to = "Power")
+```
+
+
+```{r}
+power_plot_summary_setting1 <- ggplot(long_df_power_setting1, aes(x = a, y = Power, color = Exponent)) +
+  geom_line() +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Exponents", x = "Signal Strength - Amplitude", y = "Simulated Power") +
+  theme_minimal()
+print(power_plot_summary_setting1)
+```
+
+
