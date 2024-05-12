@@ -91,3 +91,81 @@ print(power_plot_summary_setting1)
 ```
 
 
+# Setting 2 summary graph across exponents
+
+```{r}
+combined_df_setting2 <- ep_method1_0_setting2 %>%
+  full_join(ep_method1_1_16_setting2 %>% rename(power_1_16 = power, fdr_1_16 = fdr), by = 'a') %>%
+  full_join(ep_method1_1_8_setting2 %>% rename(power_1_8 = power, fdr_1_8 = fdr), by = 'a') %>%
+  full_join(ep_method1_1_4_setting2 %>% rename(power_1_4 = power, fdr_1_4 = fdr), by = 'a') %>%
+  full_join(method1_setting2 %>% rename(power_1_2 = power, fdr_1_2 = fdr), by = 'a') %>% 
+  full_join(ep_method1_3_4_setting2 %>% rename(power_3_4 = power, fdr_3_4 = fdr), by = 'a') %>%
+  full_join(ep_method1_9_10_setting2 %>% rename(power_9_10 = power, fdr_9_10 = fdr), by = 'a') %>%
+  full_join(ep_method1_1_setting2 %>% rename(power_1 = power, fdr_1 = fdr), by = 'a')
+
+combined_df_setting2 <- combined_df_setting2 %>% 
+  rename(power_0 = power, fdr_0 = fdr)
+```
+
+```{r}
+long_df_power_setting2 <- pivot_longer(combined_df_setting2, cols = c("power_0", 
+                                                             "power_1_16",
+                                                             'power_1_8',
+                                                             'power_1_4',
+                                                             'power_1_2',
+                                                             'power_3_4',
+                                                             'power_9_10',
+                                                             'power_1'), 
+                                       names_to = "Exponent", 
+                                       values_to = "Power")
+```
+
+
+```{r}
+power_plot_summary_setting2 <- ggplot(long_df_power_setting2, aes(x = a, y = Power, color = Exponent)) +
+  geom_line() +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Exponents - Setting 2", x = "Signal Strength - Amplitude", y = "Simulated Power") +
+  theme_minimal()
+print(power_plot_summary_setting2)
+```
+
+
+# Setting 3 summary graph across exponents
+
+
+```{r}
+combined_df_setting3 <- ep_method1_0_setting3 %>%
+  full_join(ep_method1_1_16_setting3 %>% rename(power_1_16 = power, fdr_1_16 = fdr), by = 'a') %>%
+  full_join(ep_method1_1_8_setting3 %>% rename(power_1_8 = power, fdr_1_8 = fdr), by = 'a') %>%
+  full_join(ep_method1_1_4_setting3 %>% rename(power_1_4 = power, fdr_1_4 = fdr), by = 'a') %>%
+  full_join(method1_setting3 %>% rename(power_1_2 = power, fdr_1_2 = fdr), by = 'a') %>% 
+  full_join(ep_method1_3_4_setting3 %>% rename(power_3_4 = power, fdr_3_4 = fdr), by = 'a') %>%
+  full_join(ep_method1_9_10_setting3 %>% rename(power_9_10 = power, fdr_9_10 = fdr), by = 'a') %>%
+  full_join(ep_method1_1_setting3 %>% rename(power_1 = power, fdr_1 = fdr), by = 'a')
+
+combined_df_setting3 <- combined_df_setting3 %>% 
+  rename(power_0 = power, fdr_0 = fdr)
+```
+
+```{r}
+long_df_power_setting3 <- pivot_longer(combined_df_setting3, cols = c("power_0", 
+                                                             "power_1_16",
+                                                             'power_1_8',
+                                                             'power_1_4',
+                                                             'power_1_2',
+                                                             'power_3_4',
+                                                             'power_9_10',
+                                                             'power_1'), 
+                                       names_to = "Exponent", 
+                                       values_to = "Power")
+```
+
+```{r}
+power_plot_summary_setting3 <- ggplot(long_df_power_setting3, aes(x = a, y = Power, color = Exponent)) +
+  geom_line() +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Exponents - Setting 3", x = "Signal Strength - Amplitude", y = "Simulated Power") +
+  theme_minimal()
+print(power_plot_summary_setting3)
+```
