@@ -9,6 +9,12 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(knockoff)
+library(pracma)
+library(tidyverse)
+```
+
 # ep BH procedure
 
 ```{r}
