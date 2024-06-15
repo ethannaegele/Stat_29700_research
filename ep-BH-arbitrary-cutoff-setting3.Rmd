@@ -1,0 +1,34 @@
+---
+title: "ep-BH cutoff setting 3"
+author: "Ethan Naegele"
+date: "2024-05-26"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+run_ep_method1_cutoff_setting3_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                               alpha = .05,
+                                               cutoff = .2,
+                                               num_iter = 500){
+result_vec_power <- c()
+result_vec_fdr <- c()
+for (amp in a_vec){
+  result <- run_ep_method1_cutoff_simulation(n = 1000,
+                                          d = 100,
+                                          a = amp, 
+                                          num_true_sigs = 20,
+                                          alpha = alpha,
+                                          cutoff = cutoff,
+                                          num_iter = num_iter)
+  result_vec_power <- c(result_vec_power, result$power)
+  result_vec_fdr <- c(result_vec_fdr, result$fdr)
+}
+return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+

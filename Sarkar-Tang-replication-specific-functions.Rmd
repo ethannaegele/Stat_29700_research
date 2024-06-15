@@ -526,6 +526,30 @@ independent_BH_setting2 <- data.frame(a = c(2, 4, 6, 8, 10),
 ```
 
 
+```{r}
+set.seed(12)
+# running setting 3 as specified in the paper
+result_vec_power_independent_BH_setting3 <- c()
+result_vec_fdr_independent_BH_setting3 <- c()
+for (amp in c(2, 4, 6, 8, 10)){
+  result <- run_independent_BH_simulation(n = 1000,
+                                          d = 100,
+                                          a = amp, 
+                                          num_true_sigs = 20, 
+                                          num_iter = 500)
+  result_vec_power_independent_BH_setting3 <- c(result_vec_power_independent_BH_setting3, result$power)
+  result_vec_fdr_independent_BH_setting3 <- c(result_vec_fdr_independent_BH_setting3, result$fdr)
+}
+
+```
+
+```{r}
+independent_BH_setting3 <- data.frame(a = c(2, 4, 6, 8, 10), 
+                                         power = result_vec_power_independent_BH_setting3, 
+                                         fdr = result_vec_fdr_independent_BH_setting3)
+```
+
+
 ## Graphs for Independent BH
 
 
