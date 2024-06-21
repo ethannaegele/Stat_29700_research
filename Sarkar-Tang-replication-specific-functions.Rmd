@@ -38,6 +38,26 @@ get_variance_parameter_estimate <- function(X, Y){
   df_X$Y <- Y
   
   # Fit the model using the formula
+  model <- lm(Y ~ 0 + ., data=df_X)
+  residuals_sum_sq <- deviance(model)
+  return(sqrt(residuals_sum_sq / (n - d)))
+}
+
+get_variance_parameter_estimate2 <- function(X, Y){
+  n <- nrow(X)
+  d <- ncol(X)
+  # Ensure Y is a vector and has appropriate length
+  #if (!is.vector(Y) || length(Y) != nrow(X)) {
+   # stop("Y must be a vector and match the number of rows in X")
+ # }
+  
+  # Convert X to a data frame
+  df_X <- as.data.frame(X)
+  
+  # Add Y to the dataframe
+  df_X$Y <- Y
+  
+  # Fit the model using the formula
   model <- lm(Y ~ ., data=df_X)
   residuals_sum_sq <- deviance(model)
   return(sqrt(residuals_sum_sq / (n - d)))

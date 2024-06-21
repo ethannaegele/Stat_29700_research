@@ -1,0 +1,160 @@
+---
+title: "Sarkar and Tang method 2 v2"
+author: "Ethan Naegele"
+date: "2024-05-04"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(knockoff)
+library(pracma)
+library(tidyverse)
+```
+
+This document runs the same simulations that were in the Sarkar and Tang method 2 file but now with a corrected function for the variance parameter estimate, where the linear model does not try to calculate an intercept term. We also run the simulations using wrapper functions to save space. 
+
+# Method 2 from Sarkar and Tang
+
+```{r}
+sarkar_tang_method2 <- function(X, Y, alpha = .05, eta = .7){
+  d <- ncol(X)
+  nu <- nrow(X) - 2 * d # n - 2d assuming n > 2d
+  T1 <- get_T_1(X, Y)
+  T2 <- get_T_2(X, Y)
+  P_t1 <- pf(T1^2, 1, nu, lower.tail = FALSE) # to calculate probabilities with the t^2_n distribution, have to use the F(1, n) distribution
+  P_t2 <- pf(T2^2, 1, nu, lower.tail = FALSE)
+  pi_0_hat <- (d - sum(as.numeric(P_t2 <= eta)) + 1) / (d * (1 - eta)) # Storey-type null proportion estimate in Step 2
+  P_star <- numeric(d)
+  for (j in 1:d){
+    if (P_t1[j] > sqrt(alpha)){
+      P_star[j] <- 1
+    }
+    else{
+      P_star[j] <- P_t2[j] * pi_0_hat
+    }
+  }
+  P_star_BH <- p.adjust(P_star, method = "BH")
+  rejected_indices <- which(P_star_BH <= sqrt(alpha))
+  return(rejected_indices) # the indices of the features that the test concludes are nonzero
+  
+}
+```
+
+
+```{r}
+run_method2_simulation <- function(n, d, a, num_true_sigs, eta = .7, num_iter = 300){
+  # Sets up the regression problem with specified dimensions and number of true signals, all of which have
+  # the same amplitude. 
+  fdp_vec <- numeric(num_iter)
+pwr_vec <- c(num_iter)
+for (m in 1:num_iter){
+  feature_indices <- 1:d
+  regression <- get_regression_model(n = n, d = d, a = a, num_true_signals = num_true_sigs)
+  true_nonzero_indices <- regression$nonzero_indices
+  rejected_indices <- sarkar_tang_method2(regression$X, regression$Y, alpha = .05, eta = eta)
+  num_rejections <- length(rejected_indices)
+  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
+  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
+  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
+  pwr_vec[m] <- num_correct_rejections / max(length(true_nonzero_indices), 1)
+}
+fdr <- mean(fdp_vec)
+pwr <- mean(pwr_vec)
+return(list(fdr = fdr, power = pwr))
+}
+```
+
+
+
+## Running method 2 simulations
+
+```{r}
+run_sarkar_tang_method2_setting1_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                                        eta = .5,
+                                               num_iter = 500){
+result_vec_power <- c()
+result_vec_fdr <- c()
+for (amp in a_vec){
+  result <- run_method2_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          eta = eta, 
+                                          num_iter = num_iter)
+  result_vec_power <- c(result_vec_power, result$power)
+  result_vec_fdr <- c(result_vec_fdr, result$fdr)
+}
+return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+
+```{r}
+run_sarkar_tang_method2_setting2_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                                        eta = .5,
+                                               num_iter = 500){
+result_vec_power <- c()
+result_vec_fdr <- c()
+for (amp in a_vec){
+  result <- run_method2_simulation(n = 500,
+                                          d = 50,
+                                          a = amp, 
+                                          num_true_sigs = 10,
+                                          eta = eta, 
+                                          num_iter = num_iter)
+  result_vec_power <- c(result_vec_power, result$power)
+  result_vec_fdr <- c(result_vec_fdr, result$fdr)
+}
+return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+
+
+```{r}
+run_sarkar_tang_method2_setting3_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                                        eta = .5,
+                                               num_iter = 500){
+result_vec_power <- c()
+result_vec_fdr <- c()
+for (amp in a_vec){
+  result <- run_method2_simulation(n = 1000,
+                                          d = 100,
+                                          a = amp, 
+                                          num_true_sigs = 20,
+                                          eta = eta, 
+                                          num_iter = num_iter)
+  result_vec_power <- c(result_vec_power, result$power)
+  result_vec_fdr <- c(result_vec_fdr, result$fdr)
+}
+return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+
+
+```{r}
+set.seed(12)
+method2_setting1_v2 <- run_sarkar_tang_method2_setting1_simulation()
+```
+
+
+```{r}
+set.seed(12)
+method2_setting2_v2 <- run_sarkar_tang_method2_setting2_simulation()
+```
+
+
+
+```{r}
+set.seed(12)
+method2_setting3_v2 <- run_sarkar_tang_method2_setting3_simulation()
+```
+
+
+
+

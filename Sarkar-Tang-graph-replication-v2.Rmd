@@ -1,0 +1,208 @@
+---
+title: "Sarkar and Tang graph replication"
+author: "Ethan Naegele"
+date: "2024-05-13"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setting 1 comparison replication
+
+
+```{r}
+combined_df_setting1_replication_v2 <- method1_setting1_v2 %>% 
+  full_join(method2_setting1_v2 %>% rename(power_method2 = power, fdr_method2 = fdr), by = 'a') %>% 
+  full_join(knockoffs_setting1_v2 %>% rename(power_knockoffs = power, fdr_knockoffs = fdr), by = 'a') %>% 
+  full_join(independent_BH_setting1_v2 %>% rename(power_indep_bh = power, fdr_indep_bh = fdr), by = 'a')
+
+combined_df_setting1_replication_v2 <- combined_df_setting1_replication_v2 %>% 
+  rename(power_method1 = power, fdr_method1 = fdr)
+```
+
+
+
+```{r}
+long_df_power_setting1_replication_v2 <- pivot_longer(combined_df_setting1_replication_v2, cols = c("power_method1", 
+                                                             "power_method2",
+                                                             'power_knockoffs',
+                                                             'power_indep_bh'
+                                                             ), 
+                                       names_to = "Method", 
+                                       values_to = "Power")
+```
+
+```{r}
+long_df_fdr_setting1_replication_v2 <- pivot_longer(combined_df_setting1_replication_v2, cols = c("fdr_method1", 
+                                                             "fdr_method2",
+                                                             'fdr_knockoffs',
+                                                             'fdr_indep_bh'
+                                                             ), 
+                                       names_to = "Method", 
+                                       values_to = "FDR")
+```
+
+```{r}
+power_plot_summary_setting1_replication_v2 <- ggplot(long_df_power_setting1_replication_v2, aes(x = a, y = Power, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("power_method1" = "green", 
+                                "power_method2" = "purple", 
+                                "power_knockoffs" = "blue",
+                                'power_indep_bh' = 'red')) +
+  scale_shape_manual(values = c(4, 1, 5, 2)) +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Methods - Setting 1 (n = 200, d = 40, k = 8)", x = "Signal Strength - Amplitude", y = "Simulated Power") +
+  theme_minimal()
+print(power_plot_summary_setting1_replication_v2)
+```
+
+```{r}
+fdr_plot_summary_setting1_replication_v2 <- ggplot(long_df_fdr_setting1_replication_v2, aes(x = a, y = FDR, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("fdr_method1" = "green", 
+                                "fdr_method2" = "purple", 
+                                "fdr_knockoffs" = "blue",
+                                'fdr_indep_bh' = 'red')) +
+  scale_shape_manual(values = c(4, 1, 5, 2)) +
+  scale_y_continuous(limits = c(0, .15)) + 
+  labs(title = "Simulated FDR Across Different Methods - Setting 1 (n = 200, d = 40, k = 8)", x = "Signal Strength - Amplitude", y = "Simulated FDR") +
+  theme_minimal()
+print(fdr_plot_summary_setting1_replication_v2)
+```
+
+# Setting 2 comparison replication
+
+```{r}
+combined_df_setting2_replication_v2 <- method1_setting2_v2 %>% 
+  full_join(method2_setting2_v2 %>% rename(power_method2 = power, fdr_method2 = fdr), by = 'a') %>% 
+  full_join(knockoffs_setting2_v2 %>% rename(power_knockoffs = power, fdr_knockoffs = fdr), by = 'a') %>% 
+  full_join(independent_BH_setting2_v2 %>% rename(power_indep_bh = power, fdr_indep_bh = fdr), by = 'a')
+
+combined_df_setting2_replication_v2 <- combined_df_setting2_replication_v2 %>% 
+  rename(power_method1 = power, fdr_method1 = fdr)
+```
+
+
+```{r}
+long_df_power_setting2_replication_v2 <- pivot_longer(combined_df_setting2_replication_v2, cols = c("power_method1", 
+                                                             "power_method2",
+                                                             'power_knockoffs',
+                                                             'power_indep_bh'
+                                                             ), 
+                                       names_to = "Method", 
+                                       values_to = "Power")
+```
+
+```{r}
+long_df_fdr_setting2_replication_v2 <- pivot_longer(combined_df_setting2_replication_v2, cols = c("fdr_method1", 
+                                                             "fdr_method2",
+                                                             'fdr_knockoffs',
+                                                             'fdr_indep_bh'
+                                                             ), 
+                                       names_to = "Method", 
+                                       values_to = "FDR")
+```
+
+
+```{r}
+power_plot_summary_setting2_replication_v2 <- ggplot(long_df_power_setting2_replication_v2, aes(x = a, y = Power, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("power_method1" = "green", 
+                                "power_method2" = "purple", 
+                                "power_knockoffs" = "blue",
+                                'power_indep_bh' = 'red')) +
+  scale_shape_manual(values = c(4, 1, 5, 2)) +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Methods - Setting 2 (n = 500, d = 50, k = 10)", x = "Signal Strength - Amplitude", y = "Simulated Power") +
+  theme_minimal()
+print(power_plot_summary_setting2_replication_v2)
+```
+
+
+```{r}
+fdr_plot_summary_setting2_replication_v2 <- ggplot(long_df_fdr_setting2_replication_v2, aes(x = a, y = FDR, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("fdr_method1" = "green", 
+                                "fdr_method2" = "purple", 
+                                "fdr_knockoffs" = "blue",
+                                'fdr_indep_bh' = 'red')) +
+  scale_shape_manual(values = c(4, 1, 5, 2)) +
+  scale_y_continuous(limits = c(0, .15)) + 
+  labs(title = "Simulated FDR Across Different Methods - Setting 2 (n = 500, d = 50, k = 10)", x = "Signal Strength - Amplitude", y = "Simulated FDR") +
+  theme_minimal()
+print(fdr_plot_summary_setting2_replication_v2)
+```
+
+
+# Setting 3 comparison replication
+
+
+
+```{r}
+combined_df_setting3_replication_v2 <- method1_setting3_v2 %>% 
+  full_join(method2_setting3_v2 %>% rename(power_method2 = power, fdr_method2 = fdr), by = 'a') %>% 
+  full_join(knockoffs_setting3_v2 %>% rename(power_knockoffs = power, fdr_knockoffs = fdr), by = 'a') %>% 
+  full_join(independent_BH_setting3_v2 %>% rename(power_indep_bh = power, fdr_indep_bh = fdr), by = 'a')
+
+combined_df_setting3_replication_v2 <- combined_df_setting3_replication_v2 %>% 
+  rename(power_method1 = power, fdr_method1 = fdr)
+```
+
+```{r}
+long_df_power_setting3_replication_v2 <- pivot_longer(combined_df_setting3_replication_v2, cols = c("power_method1", 
+                                                             "power_method2",
+                                                             'power_knockoffs',
+                                                             'power_indep_bh'
+                                                             ), 
+                                       names_to = "Method", 
+                                       values_to = "Power")
+```
+
+```{r}
+long_df_fdr_setting3_replication_v2 <- pivot_longer(combined_df_setting3_replication_v2, cols = c("fdr_method1", 
+                                                             "fdr_method2",
+                                                             'fdr_knockoffs',
+                                                             'fdr_indep_bh'
+                                                             ), 
+                                       names_to = "Method", 
+                                       values_to = "FDR")
+```
+
+
+
+```{r}
+power_plot_summary_setting3_replication_v2 <- ggplot(long_df_power_setting3_replication_v2, aes(x = a, y = Power, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("power_method1" = "green", 
+                                "power_method2" = "purple", 
+                                "power_knockoffs" = "blue",
+                                'power_indep_bh' = 'red')) +
+  scale_shape_manual(values = c(4, 1, 5, 2)) +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Methods - Setting 3 (n = 1000, d = 100, k = 20)", x = "Signal Strength - Amplitude", y = "Simulated Power") +
+  theme_minimal()
+print(power_plot_summary_setting3_replication_v2)
+```
+
+```{r}
+fdr_plot_summary_setting3_replication_v2 <- ggplot(long_df_fdr_setting3_replication_v2, aes(x = a, y = FDR, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("fdr_method1" = "green", 
+                                "fdr_method2" = "purple", 
+                                "fdr_knockoffs" = "blue",
+                                'fdr_indep_bh' = 'red')) +
+  scale_shape_manual(values = c(4, 1, 5, 2)) +
+  scale_y_continuous(limits = c(0, .15)) + 
+  labs(title = "Simulated FDR Across Different Methods - Setting 3 (n = 1000, d = 100, k = 20)", x = "Signal Strength - Amplitude", y = "Simulated FDR") +
+  theme_minimal()
+print(fdr_plot_summary_setting3_replication_v2)
+```
+
