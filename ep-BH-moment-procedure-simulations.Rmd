@@ -1,0 +1,517 @@
+---
+title: "ep-moment-method-simulation"
+author: "Ethan Naegele"
+date: "2024-07-09"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(knockoff)
+library(pracma)
+library(tidyverse)
+library(TreeTools)
+```
+
+```{r}
+run_ep_moment_method1_simulation <- function(n, d, a, num_true_sigs, num_iter = 500, sigma = 1, moment = 2, dampen = FALSE){
+  # Sets up the regression problem with specified dimensions and number of true signals, all of which have
+  # the same amplitude. 
+  fdp_vec <- numeric(num_iter)
+pwr_vec <- c(num_iter)
+for (m in 1:num_iter){
+  feature_indices <- 1:d
+  regression <- get_regression_model(n = n, d = d, a = a, num_true_signals = num_true_sigs)
+  true_nonzero_indices <- regression$nonzero_indices
+  rejected_indices <- ep_moment_method1_2(regression$X, regression$Y, alpha = .05, 
+                                        sigma = sigma, moment = moment, dampen = dampen)
+  num_rejections <- length(rejected_indices)
+  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
+  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
+  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
+  pwr_vec[m] <- num_correct_rejections / max(length(true_nonzero_indices), 1)
+}
+fdr <- mean(fdp_vec)
+pwr <- mean(pwr_vec)
+return(list(fdr = fdr, power = pwr))
+}
+```
+
+
+```{r}
+run_ep_moment_method1_setting1_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                               num_iter = 500, 
+                                               moment = 2,
+                                               dampen = FALSE){
+result_vec_power <- c()
+result_vec_fdr <- c()
+for (amp in a_vec){
+  result <- run_ep_moment_method1_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          num_iter = num_iter,
+                                          sigma = 1, # sigma is 1 in this simulation
+                                          moment = moment,
+                                          dampen = dampen)
+  result_vec_power <- c(result_vec_power, result$power)
+  result_vec_fdr <- c(result_vec_fdr, result$fdr)
+}
+return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+
+```{r}
+set.seed(12)
+ep_moment_method1_setting1_m2 <- run_ep_moment_method1_setting1_simulation(moment = 2)
+```
+
+```{r}
+set.seed(12)
+ep_moment_method1_setting1_m4 <- run_ep_moment_method1_setting1_simulation(moment = 4)
+```
+
+```{r}
+set.seed(12)
+ep_moment_method1_setting1_m6 <- run_ep_moment_method1_setting1_simulation(moment = 6)
+```
+
+Doesn't control the FDR at all.
+
+# next attempt
+
+```{r}
+set.seed(12)
+ep_moment_method1_setting1_m2_v2 <- run_ep_moment_method1_setting1_simulation(moment = 2)
+```
+
+
+```{r}
+set.seed(12)
+ep_moment_method1_setting1_m4_v2 <- run_ep_moment_method1_setting1_simulation(moment = 4)
+```
+
+
+```{r}
+set.seed(12)
+ep_moment_method1_setting1_m6_v2 <- run_ep_moment_method1_setting1_simulation(moment = 6)
+```
+
+```{r}
+set.seed(12)
+ep_moment_method1_setting1_m8_v2 <- run_ep_moment_method1_setting1_simulation(moment = 8)
+```
+
+```{r}
+set.seed(12)
+ep_moment_method1_setting1_m8_dampen_v2 <- run_ep_moment_method1_setting1_simulation(moment = 8, dampen = TRUE)
+```
+
+
+# method1_2_sigma
+
+```{r}
+run_ep_moment_method1_2_sigma_simulation <- function(n, d, a, num_true_sigs, num_iter = 500, sigma = 1, moment = 2, dampen = FALSE){
+  # Sets up the regression problem with specified dimensions and number of true signals, all of which have
+  # the same amplitude. 
+  fdp_vec <- numeric(num_iter)
+pwr_vec <- c(num_iter)
+for (m in 1:num_iter){
+  feature_indices <- 1:d
+  regression <- get_regression_model(n = n, d = d, a = a, num_true_signals = num_true_sigs)
+  true_nonzero_indices <- regression$nonzero_indices
+  rejected_indices <- ep_moment_method1_2_sigma(regression$X, regression$Y, alpha = .05, 
+                                        sigma = sigma, moment = moment, dampen = dampen)
+  num_rejections <- length(rejected_indices)
+  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
+  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
+  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
+  pwr_vec[m] <- num_correct_rejections / max(length(true_nonzero_indices), 1)
+}
+fdr <- mean(fdp_vec)
+pwr <- mean(pwr_vec)
+return(list(fdr = fdr, power = pwr))
+}
+```
+
+
+```{r}
+run_ep_moment_method1_2_sigma_setting1_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                               num_iter = 500, 
+                                               moment = 2,
+                                               dampen = FALSE){
+result_vec_power <- c()
+result_vec_fdr <- c()
+for (amp in a_vec){
+  result <- run_ep_moment_method1_2_sigma_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          num_iter = num_iter,
+                                          sigma = 1, # sigma is 1 in this simulation
+                                          moment = moment,
+                                          dampen = dampen)
+  result_vec_power <- c(result_vec_power, result$power)
+  result_vec_fdr <- c(result_vec_fdr, result$fdr)
+}
+return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+
+```{r}
+set.seed(12)
+ep_moment_method1_2_sigma_setting1_m2 <- run_ep_moment_method1_2_sigma_setting1_simulation(moment = 2)
+```
+
+```{r}
+set.seed(12)
+ep_moment_method1_2_sigma_setting1_m4 <- run_ep_moment_method1_2_sigma_setting1_simulation(moment = 4)
+```
+
+```{r}
+set.seed(12)
+ep_moment_method1_2_sigma_setting1_m6 <- run_ep_moment_method1_2_sigma_setting1_simulation(moment = 6)
+```
+
+```{r}
+set.seed(12)
+ep_moment_method1_2_sigma_setting1_m8 <- run_ep_moment_method1_2_sigma_setting1_simulation(moment = 8)
+```
+
+# method1_3_sigma
+
+```{r}
+run_ep_moment_method1_3_sigma_simulation <- function(n, d, a, num_true_sigs, num_iter = 500, sigma = 1, moment = 2, dampen = FALSE){
+  # Sets up the regression problem with specified dimensions and number of true signals, all of which have
+  # the same amplitude. 
+  fdp_vec <- numeric(num_iter)
+pwr_vec <- c(num_iter)
+for (m in 1:num_iter){
+  feature_indices <- 1:d
+  regression <- get_regression_model(n = n, d = d, a = a, num_true_signals = num_true_sigs)
+  true_nonzero_indices <- regression$nonzero_indices
+  rejected_indices <- ep_moment_method1_3_sigma(regression$X, regression$Y, alpha = .05, 
+                                        sigma = sigma, moment = moment, dampen = dampen)
+  num_rejections <- length(rejected_indices)
+  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
+  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
+  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
+  pwr_vec[m] <- num_correct_rejections / max(length(true_nonzero_indices), 1)
+}
+fdr <- mean(fdp_vec)
+pwr <- mean(pwr_vec)
+return(list(fdr = fdr, power = pwr))
+}
+```
+
+
+```{r}
+run_ep_moment_method1_3_sigma_setting1_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                               num_iter = 500, 
+                                               moment = 2,
+                                               dampen = FALSE){
+result_vec_power <- c()
+result_vec_fdr <- c()
+for (amp in a_vec){
+  result <- run_ep_moment_method1_3_sigma_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          num_iter = num_iter,
+                                          sigma = 1, # sigma is 1 in this simulation
+                                          moment = moment,
+                                          dampen = dampen)
+  result_vec_power <- c(result_vec_power, result$power)
+  result_vec_fdr <- c(result_vec_fdr, result$fdr)
+}
+return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+```{r}
+set.seed(12)
+ep_moment_method1_3_sigma_setting1_m2 <- run_ep_moment_method1_3_sigma_setting1_simulation(moment = 2)
+```
+
+```{r}
+set.seed(12)
+ep_moment_method1_3_sigma_setting1_m4 <- run_ep_moment_method1_3_sigma_setting1_simulation(moment = 4)
+```
+
+```{r}
+set.seed(12)
+ep_moment_method1_3_sigma_setting1_m6 <- run_ep_moment_method1_3_sigma_setting1_simulation(moment = 6)
+```
+
+```{r}
+set.seed(12)
+ep_moment_method1_3_sigma_setting1_m8 <- run_ep_moment_method1_3_sigma_setting1_simulation(moment = 8)
+```
+
+
+
+# method for unknown variance
+
+
+```{r}
+run_ep_moment_method_simulation <- function(n, d, a, num_true_sigs, num_iter = 500, moment = 2, dampen = FALSE){
+  # Sets up the regression problem with specified dimensions and number of true signals, all of which have
+  # the same amplitude. 
+  fdp_vec <- numeric(num_iter)
+pwr_vec <- c(num_iter)
+for (m in 1:num_iter){
+  feature_indices <- 1:d
+  regression <- get_regression_model(n = n, d = d, a = a, num_true_signals = num_true_sigs)
+  true_nonzero_indices <- regression$nonzero_indices
+  rejected_indices <- ep_moment_method(regression$X, regression$Y, moment = moment, alpha = .05, 
+                                        dampen = dampen)
+  num_rejections <- length(rejected_indices)
+  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
+  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
+  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
+  pwr_vec[m] <- num_correct_rejections / max(length(true_nonzero_indices), 1)
+}
+fdr <- mean(fdp_vec)
+pwr <- mean(pwr_vec)
+return(list(fdr = fdr, power = pwr))
+}
+```
+
+
+```{r}
+run_ep_moment_method_setting1_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                               num_iter = 500, 
+                                               moment = 2,
+                                               dampen = FALSE){
+result_vec_power <- c()
+result_vec_fdr <- c()
+for (amp in a_vec){
+  result <- run_ep_moment_method_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          moment = moment,
+                                          num_iter = num_iter,
+                                          dampen = dampen)
+  result_vec_power <- c(result_vec_power, result$power)
+  result_vec_fdr <- c(result_vec_fdr, result$fdr)
+}
+return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+```{r}
+run_ep_moment_method_setting2_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                               num_iter = 500, 
+                                               moment = 2,
+                                               dampen = FALSE){
+result_vec_power <- c()
+result_vec_fdr <- c()
+for (amp in a_vec){
+  result <- run_ep_moment_method_simulation(n = 500,
+                                          d = 50,
+                                          a = amp, 
+                                          num_true_sigs = 10,
+                                          moment = moment,
+                                          num_iter = num_iter,
+                                          dampen = dampen)
+  result_vec_power <- c(result_vec_power, result$power)
+  result_vec_fdr <- c(result_vec_fdr, result$fdr)
+}
+return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+```{r}
+run_ep_moment_method_setting3_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                               num_iter = 500, 
+                                               moment = 2,
+                                               dampen = FALSE){
+result_vec_power <- c()
+result_vec_fdr <- c()
+for (amp in a_vec){
+  result <- run_ep_moment_method_simulation(n = 1000,
+                                          d = 100,
+                                          a = amp, 
+                                          num_true_sigs = 20,
+                                          moment = moment,
+                                          num_iter = num_iter,
+                                          dampen = dampen)
+  result_vec_power <- c(result_vec_power, result$power)
+  result_vec_fdr <- c(result_vec_fdr, result$fdr)
+}
+return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+# alternate version
+
+
+```{r}
+run_ep_moment_method_alternate_simulation <- function(n, d, a, num_true_sigs, num_iter = 500, moment = 2, dampen = FALSE){
+  # Sets up the regression problem with specified dimensions and number of true signals, all of which have
+  # the same amplitude. 
+  fdp_vec <- numeric(num_iter)
+pwr_vec <- c(num_iter)
+for (m in 1:num_iter){
+  feature_indices <- 1:d
+  regression <- get_regression_model(n = n, d = d, a = a, num_true_signals = num_true_sigs)
+  true_nonzero_indices <- regression$nonzero_indices
+  rejected_indices <- ep_moment_method_alternate(regression$X, regression$Y, moment = moment, alpha = .05, 
+                                        dampen = dampen)
+  num_rejections <- length(rejected_indices)
+  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
+  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
+  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
+  pwr_vec[m] <- num_correct_rejections / max(length(true_nonzero_indices), 1)
+}
+fdr <- mean(fdp_vec)
+pwr <- mean(pwr_vec)
+return(list(fdr = fdr, power = pwr))
+}
+```
+
+
+```{r}
+run_ep_moment_method_alternate_setting1_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                               num_iter = 500, 
+                                               moment = 2,
+                                               dampen = FALSE){
+result_vec_power <- c()
+result_vec_fdr <- c()
+for (amp in a_vec){
+  result <- run_ep_moment_method_alternate_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          moment = moment,
+                                          num_iter = num_iter,
+                                          dampen = dampen)
+  result_vec_power <- c(result_vec_power, result$power)
+  result_vec_fdr <- c(result_vec_fdr, result$fdr)
+}
+return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+```{r}
+run_ep_moment_method_alternate_setting2_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                               num_iter = 500, 
+                                               moment = 2,
+                                               dampen = FALSE){
+result_vec_power <- c()
+result_vec_fdr <- c()
+for (amp in a_vec){
+  result <- run_ep_moment_method_alternate_simulation(n = 500,
+                                          d = 50,
+                                          a = amp, 
+                                          num_true_sigs = 10,
+                                          moment = moment,
+                                          num_iter = num_iter,
+                                          dampen = dampen)
+  result_vec_power <- c(result_vec_power, result$power)
+  result_vec_fdr <- c(result_vec_fdr, result$fdr)
+}
+return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+
+```{r}
+run_ep_moment_method_alternate_setting3_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                               num_iter = 500, 
+                                               moment = 2,
+                                               dampen = FALSE){
+result_vec_power <- c()
+result_vec_fdr <- c()
+for (amp in a_vec){
+  result <- run_ep_moment_method_alternate_simulation(n = 1000,
+                                          d = 100,
+                                          a = amp, 
+                                          num_true_sigs = 20,
+                                          moment = moment,
+                                          num_iter = num_iter,
+                                          dampen = dampen)
+  result_vec_power <- c(result_vec_power, result$power)
+  result_vec_fdr <- c(result_vec_fdr, result$fdr)
+}
+return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+
+
+# setting 1
+
+```{r}
+set.seed(12)
+ep_moment_method_setting1 <- run_ep_moment_method_setting1_simulation()
+```
+
+```{r}
+set.seed(12)
+ep_moment_method_setting2 <- run_ep_moment_method_setting2_simulation()
+```
+
+```{r}
+set.seed(12)
+ep_moment_method_setting3 <- run_ep_moment_method_setting3_simulation()
+```
+
+# with moment parameter
+
+```{r}
+set.seed(12)
+ep_moment_method_setting1_m2 <- run_ep_moment_method_setting1_simulation(moment = 2)
+```
+
+```{r}
+set.seed(12)
+ep_moment_method_setting1_m4 <- run_ep_moment_method_setting1_simulation(moment = 4)
+```
+
+
+# with dampening
+
+
+```{r}
+set.seed(12)
+ep_moment_method_setting1_m2_dmp <- run_ep_moment_method_setting1_simulation(moment = 2, dampen = TRUE)
+```
+
+
+
+# setting 2
+
+```{r}
+set.seed(12)
+ep_moment_method_setting2_m2 <- run_ep_moment_method_setting2_simulation(moment = 2)
+```
+
+
+# setting 3
+
+
+```{r}
+set.seed(12)
+ep_moment_method_setting3_m2 <- run_ep_moment_method_setting3_simulation(moment = 2)
+```
+
+
+
+# alternate method simulations
+
+```{r}
+set.seed(12)
+ep_moment_method_alternate_setting1_m2 <- run_ep_moment_method_alternate_setting1_simulation(moment = 2)
+```
+
+```{r}
+set.seed(12)
+ep_moment_method_alternate_setting2_m2 <- run_ep_moment_method_alternate_setting2_simulation(moment = 2)
+```

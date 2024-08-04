@@ -1,0 +1,124 @@
+---
+title: "base BH sim"
+author: "Ethan Naegele"
+date: "2024-08-01"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dbh)
+library(cknockoff)
+```
+
+
+# BH function
+
+```{r}
+bh <- function(p_values, alpha = .05){
+  Q_BH <- p.adjust(p_values, method = 'BH')
+  rejected_indices <- which(Q_BH <= alpha)
+  return(rejected_indices)
+}
+```
+
+```{r}
+bh_regression <- function(X, Y, alpha = .05){
+  sigma_hat <- get_variance_parameter_estimate(X, Y)
+  model <- lm(Y ~ 0 + ., data=as.data.frame(X))
+  beta_hat <- coef(model)
+  sigma_mat_inv <- solve(t(X) %*% X)
+  beta_hat_sds <- sqrt(diag(sigma_hat^2 * sigma_mat_inv))
+  t_statistics <- beta_hat / beta_hat_sds
+  p_values <- 2 * (1 - pt(abs(t_statistics), df = nrow(X) - ncol(X)))
+  rejected_indices <- bh(p_values = p_values, alpha = alpha)
+  return(rejected_indices)
+}
+```
+
+# simulation functions for basic regression setting
+
+```{r}
+run_bh_simulation <- function(n, d, a, num_true_sigs, alpha = .05, num_iter = 500){
+  # Sets up the regression problem with specified dimensions and number of true signals, all of which have
+  # the same amplitude. 
+  fdp_vec <- numeric(num_iter)
+pwr_vec <- c(num_iter)
+for (m in 1:num_iter){
+  feature_indices <- 1:d
+  regression <- get_regression_model(n = n, d = d, a = a, num_true_signals = num_true_sigs)
+  true_nonzero_indices <- regression$nonzero_indices
+  rejected_indices <- bh_regression(regression$X, regression$Y, alpha = alpha)
+  num_rejections <- length(rejected_indices)
+  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
+  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
+  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
+  pwr_vec[m] <- num_correct_rejections / max(length(true_nonzero_indices), 1)
+}
+fdr <- mean(fdp_vec)
+pwr <- mean(pwr_vec)
+return(list(fdr = fdr, power = pwr))
+}
+```
+
+
+```{r}
+# not exactly the simulation used in the LFL paper, due to computation concerns, but similar
+run_bh_lfl_setting_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                                               alpha = .05, 
+                                                               num_iter = 500){
+  result_vec_power <- c()
+  result_vec_fdr <- c()
+  for (amp in a_vec){
+    result <- run_bh_mcc_simulation(n = 1000,
+                                          d = 250,
+                                          a = amp, 
+                                          num_true_sigs = 10,
+                                          alpha = alpha,
+                                          num_iter = num_iter)
+    result_vec_power <- c(result_vec_power, result$power)
+    result_vec_fdr <- c(result_vec_fdr, result$fdr)
+  }
+  return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+# calibrating 
+
+```{r}
+set.seed(13)
+run_bh_lfl_setting_simulation(a_vec = c(4, 6), alpha = .2, num_iter = 100)
+```
+
+```{r}
+set.seed(14)
+run_bh_lfl_setting_simulation(a_vec = c(4, 4.05), alpha = .2, num_iter = 300)
+```
+
+
+```{r}
+set.seed(12)
+run_bh_lfl_setting_simulation(a_vec = c(4), alpha = .2, num_iter = 300)
+```
+
+
+```{r}
+set.seed(12)
+run_bh_lfl_setting_simulation(a_vec = c(4), alpha = .2, num_iter = 400)
+```
+
+
+```{r}
+set.seed(12)
+run_bh_lfl_setting_simulation(a_vec = c(3.95), alpha = .2, num_iter = 300)
+```
+For this setting, we have $\beta^* \approx 3.98$. 
+
+```{r}
+set.seed(12)
+
+```
+

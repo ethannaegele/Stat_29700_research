@@ -1,0 +1,396 @@
+---
+title: "ep-moment-graph-summary"
+author: "Ethan Naegele"
+date: "2024-07-17"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setting 1
+
+```{r}
+combined_df_ep_moment_setting1 <- ep_moment_method_setting1_m2 %>% 
+  full_join(ep_moment_method_setting1_m4 %>% rename(power_m4 = power, fdr_m4 = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_setting1_m6 %>% rename(power_m6 = power, fdr_m6 = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_setting1_m8 %>% rename(power_m8 = power, fdr_m8 = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_setting1_m10 %>% rename(power_m10 = power, fdr_m10 = fdr), by = 'a')
+
+combined_df_ep_moment_setting1 <- combined_df_ep_moment_setting1 %>% 
+  rename(power_m2 = power, fdr_m2 = fdr)
+```
+
+```{r}
+long_df_ep_moment_setting1_power <- pivot_longer(combined_df_ep_moment_setting1, 
+                                                          cols = starts_with("power_"), 
+                                       names_to = "Moment", 
+                                       values_to = "Power")
+long_df_ep_moment_setting1_power <- long_df_ep_moment_setting1_power %>% 
+  mutate(Moment = as.integer(gsub("power_m", "", Moment)))
+
+```
+
+
+```{r}
+long_df_ep_moment_setting1_fdr <- pivot_longer(combined_df_ep_moment_setting1, 
+                                                          cols = starts_with("fdr_"), 
+                                       names_to = "Moment", 
+                                       values_to = "FDR")
+long_df_ep_moment_setting1_fdr <- long_df_ep_moment_setting1_fdr %>% 
+  mutate(Moment = as.integer(gsub("fdr_m", "", Moment)))
+```
+
+
+```{r}
+library(RColorBrewer)
+color_palette <- colorRampPalette(brewer.pal(5, "YlOrRd"))(5)
+long_df_ep_moment_setting1_power$Moment <- as.factor(long_df_ep_moment_setting1_power$Moment) # need to convert to factor or will get error when trying to plot
+power_plot_summary_ep_moment_setting1 <- ggplot(long_df_ep_moment_setting1_power, aes(x = a, y = Power, color = Moment)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = color_palette) +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Methods - Setting 1 (n = 200, d = 40, k = 8)", x = "Signal Strength - Amplitude", y = "Simulated Power") 
+print(power_plot_summary_ep_moment_setting1)
+```
+
+
+```{r}
+library(RColorBrewer)
+color_palette <- colorRampPalette(brewer.pal(5, "YlOrRd"))(5)
+long_df_ep_moment_setting1_fdr$Moment <- as.factor(long_df_ep_moment_setting1_fdr$Moment) # need to convert to factor or will get error when trying to plot
+fdr_plot_summary_ep_moment_setting1 <- ggplot(long_df_ep_moment_setting1_fdr, aes(x = a, y = FDR, color = Moment)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = color_palette) +
+  scale_y_continuous(limits = c(0, .15)) + 
+  labs(title = "Simulated FDR Across Different Methods - Setting 1 (n = 200, d = 40, k = 8)", x = "Signal Strength - Amplitude", y = "Simulated FDR") 
+print(fdr_plot_summary_ep_moment_setting1)
+```
+
+
+# with dampening
+
+```{r}
+combined_df_ep_moment_setting1_dmp <- ep_moment_method_setting1_m2_dmp %>% 
+  full_join(ep_moment_method_setting1_m4_dmp %>% rename(power_m4 = power, fdr_m4 = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_setting1_m6_dmp %>% rename(power_m6 = power, fdr_m6 = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_setting1_m8_dmp %>% rename(power_m8 = power, fdr_m8 = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_setting1_m10_dmp %>% rename(power_m10 = power, fdr_m10 = fdr), by = 'a')
+
+combined_df_ep_moment_setting1_dmp <- combined_df_ep_moment_setting1_dmp %>% 
+  rename(power_m2 = power, fdr_m2 = fdr)
+```
+
+```{r}
+long_df_ep_moment_setting1_power_dmp <- pivot_longer(combined_df_ep_moment_setting1_dmp, 
+                                                          cols = starts_with("power_"), 
+                                       names_to = "Moment", 
+                                       values_to = "Power")
+long_df_ep_moment_setting1_power_dmp <- long_df_ep_moment_setting1_power_dmp %>% 
+  mutate(Moment = as.integer(gsub("power_m", "", Moment)))
+
+```
+
+
+```{r}
+long_df_ep_moment_setting1_fdr_dmp <- pivot_longer(combined_df_ep_moment_setting1_dmp, 
+                                                          cols = starts_with("fdr_"), 
+                                       names_to = "Moment", 
+                                       values_to = "FDR")
+long_df_ep_moment_setting1_fdr_dmp <- long_df_ep_moment_setting1_fdr_dmp %>% 
+  mutate(Moment = as.integer(gsub("fdr_m", "", Moment)))
+```
+
+```{r}
+library(RColorBrewer)
+color_palette <- colorRampPalette(brewer.pal(5, "YlOrRd"))(5)
+long_df_ep_moment_setting1_power_dmp$Moment <- as.factor(long_df_ep_moment_setting1_power_dmp$Moment) # need to convert to factor or will get error when trying to plot
+power_plot_summary_ep_moment_setting1_dmp <- ggplot(long_df_ep_moment_setting1_power_dmp, aes(x = a, y = Power, color = Moment)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = color_palette) +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Methods - Setting 1 (n = 200, d = 40, k = 8)", x = "Signal Strength - Amplitude", y = "Simulated Power") 
+print(power_plot_summary_ep_moment_setting1_dmp)
+```
+
+
+
+# Setting 2
+
+```{r}
+library(RColorBrewer)
+power_plot_summary_ep_moment_setting2 <- ggplot(ep_moment_method_setting2_m2_v2, aes(x = a, y = power)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power with ep-Moment Method - Setting 2 (n = 500, d = 50, k = 10)", x = "Signal Strength - Amplitude", y = "Simulated Power") 
+print(power_plot_summary_ep_moment_setting2)
+```
+
+```{r}
+library(RColorBrewer)
+fdr_plot_summary_ep_moment_setting2 <- ggplot(ep_moment_method_setting2_m2_v2, aes(x = a, y = fdr)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, .15)) + 
+  labs(title = "Simulated FDR with ep-Moment Method - Setting 2 (n = 500, d = 50, k = 10)", x = "Signal Strength - Amplitude", y = "Simulated FDR") 
+print(fdr_plot_summary_ep_moment_setting2)
+```
+
+
+## Setting 2 with dampening
+
+```{r}
+library(RColorBrewer)
+power_plot_summary_ep_moment_setting2_dmp <- ggplot(ep_moment_method_setting2_m2_dmp_v2, aes(x = a, y = power)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power with ep-Moment Method - Dampened e-values -\nSetting 2 (n = 500, d = 50, k = 10)", x = "Signal Strength - Amplitude", y = "Simulated Power") 
+print(power_plot_summary_ep_moment_setting2_dmp)
+```
+
+# Setting 3
+
+
+```{r}
+library(RColorBrewer)
+power_plot_summary_ep_moment_setting3 <- ggplot(ep_moment_method_setting3_m2_v2, aes(x = a, y = power)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power with ep-Moment Method - Setting 3 (n = 1000, d = 100, k = 20)", x = "Signal Strength - Amplitude", y = "Simulated Power") 
+print(power_plot_summary_ep_moment_setting3)
+```
+
+
+```{r}
+library(RColorBrewer)
+fdr_plot_summary_ep_moment_setting3 <- ggplot(ep_moment_method_setting3_m2_v2, aes(x = a, y = fdr)) +
+  geom_line() +
+  geom_point() +
+  scale_y_continuous(limits = c(0, .15)) + 
+  labs(title = "Simulated FDR with ep-Moment Method - Setting 3 (n = 1000, d = 100, k = 20)", x = "Signal Strength - Amplitude", y = "Simulated FDR") 
+print(fdr_plot_summary_ep_moment_setting3)
+```
+
+
+## Setting 3 with dampening
+
+
+
+# Knockoffs, Indep BH, and Methods 1 and 2 vs Moment Methods - Setting 1
+
+
+```{r}
+combined_df_setting1 <- method1_setting1_v2 %>% 
+  full_join(method2_setting1_v2 %>% rename(power_method2 = power, fdr_method2 = fdr), by = 'a') %>% 
+  full_join(knockoffs_setting1_v2 %>% rename(power_knockoffs = power, fdr_knockoffs = fdr), by = 'a') %>% 
+  full_join(independent_BH_setting1_v2 %>% rename(power_indep_bh = power, fdr_indep_bh = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_setting1_m2_v2 %>% rename(power_ep_moment = power, fdr_ep_moment = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_alternate_setting1_m2_v2 %>% rename(power_ep_moment_alternate = power, fdr_ep_moment_alternate = fdr), by = 'a') %>%
+  full_join(CKnockoff_setting1 %>% rename(power_CKnockoff = power, fdr_CKnockoff = fdr), by = 'a')
+
+combined_df_setting1 <- combined_df_setting1 %>% 
+  rename(power_method1 = power, fdr_method1 = fdr)
+```
+
+
+```{r}
+long_df_setting1_power <- pivot_longer(combined_df_setting1, 
+                                                          cols = starts_with("power_"), 
+                                       names_to = "Method", 
+                                       values_to = "Power")
+
+```
+
+
+```{r}
+long_df_setting1_fdr <- pivot_longer(combined_df_setting1, 
+                                                          cols = starts_with("fdr_"), 
+                                       names_to = "Method", 
+                                       values_to = "FDR")
+
+```
+
+```{r}
+power_plot_summary_setting1 <- ggplot(long_df_setting1_power, aes(x = a, y = Power, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("power_method1" = "green", 
+                                "power_method2" = "purple", 
+                                "power_knockoffs" = "blue",
+                                'power_indep_bh' = 'cyan',
+                                'power_ep_moment' = 'red',
+                                'power_ep_moment_alternate' = 'orange',
+                                'power_CKnockoff' = 'black')) +
+  scale_shape_manual(values = c(4, 1, 5, 2, 3, 10, 19)) +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Methods - Setting 1 (n = 200, d = 40, k = 8)", x = "Signal Strength - Amplitude", y = "Simulated Power") +
+  theme_minimal()
+print(power_plot_summary_setting1)
+```
+
+```{r}
+fdr_plot_summary_setting1 <- ggplot(long_df_setting1_fdr, aes(x = a, y = FDR, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("fdr_method1" = "green", 
+                                "fdr_method2" = "purple", 
+                                "fdr_knockoffs" = "blue",
+                                'fdr_indep_bh' = 'cyan',
+                                'fdr_ep_moment' = 'red',
+                                'fdr_ep_moment_alternate' = 'orange',
+                                'fdr_CKnockoff' = 'black')) +
+  scale_shape_manual(values = c(4, 1, 5, 2, 3, 10, 19)) +
+  scale_y_continuous(limits = c(0, .15)) + 
+  labs(title = "Simulated FDR Across Different Methods - Setting 1 (n = 200, d = 40, k = 8)", x = "Signal Strength - Amplitude", y = "Simulated FDR") +
+  theme_minimal()
+print(fdr_plot_summary_setting1)
+```
+
+# Knockoffs, Indep BH, and Methods 1 and 2 vs Moment Methods - Setting 2
+
+
+```{r}
+combined_df_setting2 <- method1_setting2_v2 %>% 
+  full_join(method2_setting2_v2 %>% rename(power_method2 = power, fdr_method2 = fdr), by = 'a') %>% 
+  full_join(knockoffs_setting2_v2 %>% rename(power_knockoffs = power, fdr_knockoffs = fdr), by = 'a') %>% 
+  full_join(independent_BH_setting2_v2 %>% rename(power_indep_bh = power, fdr_indep_bh = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_setting2_m2_v2 %>% rename(power_ep_moment = power, fdr_ep_moment = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_alternate_setting2_m2_v2 %>% rename(power_ep_moment_alternate = power, fdr_ep_moment_alternate = fdr), by = 'a') %>% 
+  full_join(CKnockoff_setting2 %>% rename(power_CKnockoff = power, fdr_CKnockoff = fdr), by = 'a')
+
+combined_df_setting2 <- combined_df_setting2 %>% 
+  rename(power_method1 = power, fdr_method1 = fdr)
+```
+
+
+```{r}
+long_df_setting2_power <- pivot_longer(combined_df_setting2, 
+                                                          cols = starts_with("power_"), 
+                                       names_to = "Method", 
+                                       values_to = "Power")
+
+```
+
+
+```{r}
+long_df_setting2_fdr <- pivot_longer(combined_df_setting2, 
+                                                          cols = starts_with("fdr_"), 
+                                       names_to = "Method", 
+                                       values_to = "FDR")
+
+```
+
+```{r}
+power_plot_summary_setting2 <- ggplot(long_df_setting2_power, aes(x = a, y = Power, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("power_method1" = "green", 
+                                "power_method2" = "purple", 
+                                "power_knockoffs" = "blue",
+                                'power_indep_bh' = 'cyan',
+                                'power_ep_moment' = 'red',
+                                'power_ep_moment_alternate' = 'orange',
+                                'power_CKnockoff' = 'black')) +
+  scale_shape_manual(values = c(4, 1, 5, 2, 3, 10, 19)) +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Methods - Setting 2 (n = 500, d = 50, k = 10)", x = "Signal Strength - Amplitude", y = "Simulated Power") +
+  theme_minimal()
+print(power_plot_summary_setting2)
+```
+
+
+```{r}
+fdr_plot_summary_setting2 <- ggplot(long_df_setting2_fdr, aes(x = a, y = FDR, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("fdr_method1" = "green", 
+                                "fdr_method2" = "purple", 
+                                "fdr_knockoffs" = "blue",
+                                'fdr_indep_bh' = 'cyan',
+                                'fdr_ep_moment' = 'red',
+                                'fdr_ep_moment_alternate' = 'orange',
+                                'fdr_CKnockoff' = 'black')) +
+  scale_shape_manual(values = c(4, 1, 5, 2, 3, 10, 19)) +
+  scale_y_continuous(limits = c(0, .15)) + 
+  labs(title = "Simulated FDR Across Different Methods - Setting 2 (n = 500, d = 50, k = 10)", x = "Signal Strength - Amplitude", y = "Simulated FDR") +
+  theme_minimal()
+print(fdr_plot_summary_setting2)
+```
+
+# Knockoffs, Indep BH, and Methods 1 and 2 vs Moment Methods - Setting 3
+
+
+```{r}
+combined_df_setting3 <- method1_setting3_v2 %>% 
+  full_join(method2_setting3_v2 %>% rename(power_method2 = power, fdr_method2 = fdr), by = 'a') %>% 
+  full_join(knockoffs_setting3_v2 %>% rename(power_knockoffs = power, fdr_knockoffs = fdr), by = 'a') %>% 
+  full_join(independent_BH_setting3_v2 %>% rename(power_indep_bh = power, fdr_indep_bh = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_setting3_m2_v2 %>% rename(power_ep_moment = power, fdr_ep_moment = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_alternate_setting3_m2_v2 %>% rename(power_ep_moment_alternate = power, fdr_ep_moment_alternate = fdr), by = 'a') %>% 
+  full_join(CKnockoff_setting3 %>% rename(power_CKnockoff = power, fdr_CKnockoff = fdr), by = 'a')
+
+combined_df_setting3 <- combined_df_setting3 %>% 
+  rename(power_method1 = power, fdr_method1 = fdr)
+```
+
+
+```{r}
+long_df_setting3_power <- pivot_longer(combined_df_setting3, 
+                                                          cols = starts_with("power_"), 
+                                       names_to = "Method", 
+                                       values_to = "Power")
+
+```
+
+
+```{r}
+long_df_setting3_fdr <- pivot_longer(combined_df_setting3, 
+                                                          cols = starts_with("fdr_"), 
+                                       names_to = "Method", 
+                                       values_to = "FDR")
+
+```
+
+```{r}
+power_plot_summary_setting3 <- ggplot(long_df_setting3_power, aes(x = a, y = Power, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("power_method1" = "green", 
+                                "power_method2" = "purple", 
+                                "power_knockoffs" = "blue",
+                                'power_indep_bh' = 'cyan',
+                                'power_ep_moment' = 'red',
+                                'power_ep_moment_alternate' = 'orange',
+                                'power_CKnockoff' = 'black')) +
+  scale_shape_manual(values = c(4, 1, 5, 2, 3, 10, 19)) +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Methods - Setting 3 (n = 1000, d = 100, k = 20)", x = "Signal Strength - Amplitude", y = "Simulated Power") +
+  theme_minimal()
+print(power_plot_summary_setting3)
+```
+
+```{r}
+fdr_plot_summary_setting3 <- ggplot(long_df_setting3_fdr, aes(x = a, y = FDR, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("fdr_method1" = "green", 
+                                "fdr_method2" = "purple", 
+                                "fdr_knockoffs" = "blue",
+                                'fdr_indep_bh' = 'cyan',
+                                'fdr_ep_moment' = 'red',
+                                'fdr_ep_moment_alternate' = 'orange',
+                                'fdr_CKnockoff' = 'black')) +
+  scale_shape_manual(values = c(4, 1, 5, 2, 3, 10, 19)) +
+  scale_y_continuous(limits = c(0, .15)) + 
+  labs(title = "Simulated FDR Across Different Methods - Setting 3 (n = 1000, d = 100, k = 20)", x = "Signal Strength - Amplitude", y = "Simulated FDR") +
+  theme_minimal()
+print(fdr_plot_summary_setting3)
+```
+

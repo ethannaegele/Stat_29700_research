@@ -43,25 +43,6 @@ get_variance_parameter_estimate <- function(X, Y){
   return(sqrt(residuals_sum_sq / (n - d)))
 }
 
-get_variance_parameter_estimate2 <- function(X, Y){
-  n <- nrow(X)
-  d <- ncol(X)
-  # Ensure Y is a vector and has appropriate length
-  #if (!is.vector(Y) || length(Y) != nrow(X)) {
-   # stop("Y must be a vector and match the number of rows in X")
- # }
-  
-  # Convert X to a data frame
-  df_X <- as.data.frame(X)
-  
-  # Add Y to the dataframe
-  df_X$Y <- Y
-  
-  # Fit the model using the formula
-  model <- lm(Y ~ ., data=df_X)
-  residuals_sum_sq <- deviance(model)
-  return(sqrt(residuals_sum_sq / (n - d)))
-}
 ```
 
 
@@ -72,25 +53,38 @@ get_variance_parameter_estimate2 <- function(X, Y){
 ```{r}
 # get the T_1  estimate provided at the beginning of section 2
 # SQRTM USES THE PRACMA VERSION HERE CURRENTLY
-get_T_1 <- function(X, Y){
+get_T_1 <- function(X, Y, equicor = TRUE){
   sigma <- t(X) %*% X
+  if (equicor){
   equi <- create_equicorrelated_mult(X, multiplier = 1.98) # TRYING TO USE THE MODIFIED FUNCTION FOR BETTER MATRIX CONDITION
   D <- equi$D # need to turn the output into a diagonal matrix
   X_ko <- equi$Xk
+    #D <- diag(create.solve_equi(sigma)) # this appears to give 0 power?
+   # X_ko <- create.fixed(X, method = 'equi')$Xk 
+  }
+  else{
+    D <- diag(create.solve_sdp(sigma) + rnorm(ncol(X), mean = 0, sd = .01))
+    X_ko <- create.fixed(X, method = 'sdp')$Xk
+  }
+  
   beta_hat_1 <- solve(2 * sigma - D) %*% t(X + X_ko) %*% Y
   # tau hat estimated with the columnwise concatenation of X and knockoff X
   T_1 <- (1 / (get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2))) *
     sqrtm(diag(diag(solve(2 * sigma - D))))$Binv %*% beta_hat_1 # unsure about interpretation of diag operator in the equation for T1 from the paper; this is my best interpretation of it - Ignat agrees. Binv returns the inverse of the square root that sqrtm calculates, which is what the formula requires. 
-  # The formula in the paper shows we invert 2 sigma - D first, then diag, but that is giving no power. If we 
-  # diag first then invert, it works but fdr is roughly twice alpha with high power. 
   return(T_1)
-  #return(rcond(2 * sigma - D))
 }
 
 # get the T_2 estimate 
-get_T_2 <- function(X, Y){
-  D <- diag(create.solve_equi(t(X) %*% X))
+get_T_2 <- function(X, Y, equicor = TRUE){
+  if (equicor){
+    D <- diag(create.solve_equi(t(X) %*% X)) # note: D calculated in slightly different ways for T1 and T2; this does not seem to make much of a difference in the overall results
   X_ko <- create.fixed(X, method = 'equi')$Xk
+  }
+  else{
+    D <- diag(create.solve_sdp(t(X) %*% X) + rnorm(ncol(X), mean = 0, sd = .01))
+    X_ko <- create.fixed(X, method = 'sdp')$Xk
+  }
+  
   beta_hat_2 <- solve(D) %*% t(X - X_ko) %*% Y
   T_2 <- (1 / (get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2))) * sqrtm(D)$B %*% beta_hat_2
   return(T_2)
@@ -149,11 +143,11 @@ get_regression_model(n = 100, d = 10, a = 2, num_true_signals = 1)
 
 
 ```{r}
-sarkar_tang_method1 <- function(X, Y, alpha = .05){
+sarkar_tang_method1 <- function(X, Y, alpha = .05, equicor = TRUE){
   d <- ncol(X)
   nu <- nrow(X) - 2 * d # n - 2d assuming n > 2d
-  T1 <- get_T_1(X, Y)
-  T2 <- get_T_2(X, Y)
+  T1 <- get_T_1(X, Y, equicor = equicor)
+  T2 <- get_T_2(X, Y, equicor = equicor)
   P_t1 <- pf(T1^2, 1, nu, lower.tail = FALSE) # to calculate probabilities with the t^2_n distribution, have to use the F(1, n) distribution
   P_t2 <- pf(T2^2, 1, nu, lower.tail = FALSE)
   P_tilde <- numeric(d)
@@ -206,6 +200,13 @@ condition_number_test_sdp <- function(X){
   return(rcond(2 * sigma - D))
 }
 ```
+
+```{r}
+reg <- get_regression_model(200, 40, 2, num_true_signals = 8)
+condition_number_test_sdp(reg$X)
+solve(t(reg$X) %*% reg$X)
+```
+
 
 ```{r}
 condition_number_test_equi <- function(X){
