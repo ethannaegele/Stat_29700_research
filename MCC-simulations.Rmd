@@ -117,274 +117,7 @@ gene_X <- function(X_type = "IID_Normal", n, p, X_seed = NULL){
 
 ```
 
-```{r}
-signal_calib <- function(method,
-                         X, random_X.data,
-                         pi1, noise = quote(rnorm(n)),
-                         mu_posit_type, mu_size_type,
-                         side,
-                         nreps = 200,
-                         alpha = 0.05,
-                         target = 0.3,
-                         n_cores = 7){
-    calib_method <- if(method == "BH"){
-        BH_lm_calib
-    } else if(method == "lasso"){
-        lasso_calib
-    } else if(method == "MXkn"){
-        MXkn_calib
-    }
-    
-    return(calib_method(X, random_X.data,
-                        pi1, noise,
-                        mu_posit_type, mu_size_type,
-                        side, nreps, alpha, target, n_cores))
-}
 
-## calibrate signal strength, modified from Lihua
-BH_lm_calib <- function(X, random_X.data,
-                        pi1, noise = quote(rnorm(n)),
-                        mu_posit_type, mu_size_type,
-                        side,
-                        nreps = 200,
-                        alpha = 0.05,
-                        target = 0.3,
-                        n_cores = 7){
-    if(!random_X.data$random_X){
-        n <- nrow(X)
-        p <- ncol(X)
-    } else{
-        n <- random_X.data$n
-        p <- random_X.data$p
-    }
-    
-    if(!random_X.data$random_X){
-        X_list <- list(X)
-        Sigma_list <- list(solve(t(X) %*% X))
-    } else{
-        X_list <- lapply(1:random_X.data$sample_num, function(i){
-            gene_X(random_X.data$X_type, n, p, i)$X
-        })
-        Sigma_list <- lapply(X_list, function(X){
-            solve(t(X) %*% X)
-        })
-    }
-    X_sample_num <- length(X_list)
-    
-    beta_list <- lapply(1:nreps, function(i){
-        beta <- genmu(p, pi1, 1, mu_posit_type, mu_size_type)
-        if (side == "right"){
-            beta <- abs(beta)
-        } else if (side == "left"){
-            beta <- -abs(beta)
-        }
-        return(beta)
-    })
-    eps_list <- lapply(1:nreps, function(i){
-        eval(noise)
-    })
-    
-    registerDoParallel(n_cores)
-    
-    BH_power <- function(mu1){
-        power <- unlist(foreach(i = 1:nreps) %dopar% {
-            H0 <- beta_list[[i]] == 0            
-            beta <- beta_list[[i]] * mu1
-            eps <- eps_list[[i]]
-            
-            X <- X_list[[(i%%X_sample_num)+1]]
-            Sigma <- Sigma_list[[(i%%X_sample_num)+1]]
-            
-            y <- X %*% beta + eps
-            
-            rejs_BH <- BH_lm(y, X, side = "two", alpha, Sigma = Sigma)$rejs
-            power_sample <- calc_FDP_power(rejs_BH, H0)[2]
-            
-            return(power_sample)
-        })
-        mean(power) - target
-    }
-    
-    lower <- 0
-    upper <- 10
-    while (TRUE & upper < 1000){
-        tmp <- try(uniroot(BH_power, c(lower, upper))$root)
-        if (class(tmp) == "try-error"){
-            upper <- upper * 2
-        } else {
-            return(tmp)
-        }
-    }
-    return(NA)
-}
-
-lasso_calib <- function(X, random_X.data,
-                        pi1, noise = quote(rnorm(n)),
-                        mu_posit_type, mu_size_type,
-                        side,
-                        nreps = 200,
-                        alpha = 0.05,
-                        target = 0.3,
-                        n_cores = 7){
-    if(!random_X.data$random_X){
-        n <- nrow(X)
-        p <- ncol(X)
-    } else{
-        n <- random_X.data$n
-        p <- random_X.data$p
-    }
-    
-    if(!random_X.data$random_X){
-        X_list <- list(X)
-    } else{
-        X_list <- lapply(1:random_X.data$sample_num, function(i){
-            gene_X(random_X.data$X_type, n, p, i)$X
-        })
-    }
-    X_sample_num <- length(X_list)
-    
-    beta_list <- lapply(1:nreps, function(i){
-        beta <- genmu(p, pi1, 1, mu_posit_type, mu_size_type)
-        if (side == "right"){
-            beta <- abs(beta)
-        } else if (side == "left"){
-            beta <- -abs(beta)
-        }
-        return(beta)
-    })
-    eps_list <- lapply(1:nreps, function(i){
-        eval(noise)
-    })
-    
-    registerDoParallel(n_cores)
-    
-    sel_power <- function(mu1){
-        power <- unlist(foreach(i = 1:nreps) %dopar% {
-            H0 <- beta_list[[i]] == 0            
-            beta <- beta_list[[i]] * mu1
-            eps <- eps_list[[i]]
-            
-            X <- X_list[[(i%%X_sample_num)+1]]
-            
-            y <- X %*% beta + eps
-            
-            lasso.select <- as.matrix(glmnet::glmnet(X, y, intercept = F)$beta != 0)
-            nrej_power <- sapply(1:NCOL(lasso.select), function(lambda_i){
-                c(sum(lasso.select[, lambda_i]),
-                  calc_FDP_power(which(lasso.select[, lambda_i]), H0)[2])
-            })
-            index <- which.min(abs(nrej_power[1, ] - p*pi1))
-            power_sample <- nrej_power[2, index]
-            
-            return(power_sample)
-        })
-        mean(power) - target
-    }
-    
-    lower <- 0
-    upper <- 10
-    while (TRUE & upper < 1000){
-        tmp <- try(uniroot(sel_power, c(lower, upper))$root)
-        if (class(tmp) == "try-error"){
-            upper <- upper * 2
-        } else {
-            return(tmp)
-        }
-    }
-    return(NA)
-}
-
-
-MXkn_calib <- function(X, random_X.data,
-                       pi1, noise = quote(rnorm(n)),
-                       mu_posit_type, mu_size_type,
-                       side,
-                       nreps = 200,
-                       alpha = 0.05,
-                       target = 0.3,
-                       n_cores = 7,
-                       family = "guassian"){
-    family <- "binomial"   # change accordingly: "guassian", "binomial"
-    
-    n <- random_X.data$n
-    p <- random_X.data$p
-    Xcov.true <- random_X.data$Xcov.true
-    
-    Sigma.inv <- solve(Xcov.true)
-    s <- knockoff:::create.solve_sdp(Xcov.true)
-    s[s <= 1e-5] <- 0
-    
-    Xk_mumat <- diag(p) - Sigma.inv %*% diag(s)
-    cov_kn <- 2 * diag(s) - diag(s) %*% Sigma.inv %*% diag(s)
-    cov_kn_half <- chol(cov_kn)
-    
-    X_list <- lapply(1:random_X.data$sample_num, function(i){
-        gene_X(random_X.data$X_type, n, p, i)$X
-    })
-    X_kn_list <- lapply(1:random_X.data$sample_num, function(i){
-        X <- X_list[[i]]
-        mu_kn <- X %*% Xk_mumat
-        ckn.modelX:::rnorm_mult(mu_kn, cov_kn_half)
-    })
-    
-    X_sample_num <- length(X_list)
-    
-    beta_list <- lapply(1:nreps, function(i){
-        beta <- genmu(p, pi1, 1, mu_posit_type, mu_size_type)
-        if (side == "right"){
-            beta <- abs(beta)
-        } else if (side == "left"){
-            beta <- -abs(beta)
-        }
-        return(beta)
-    })
-    
-    registerDoParallel(n_cores)
-    
-    sel_power <- function(mu1){
-        power <- unlist(foreach(i = 1:nreps) %dopar% {
-            H0 <- beta_list[[i]] == 0            
-            beta <- beta_list[[i]] * mu1
-            
-            X <- X_list[[(i%%X_sample_num)+1]]
-            X_kn <- X_kn_list[[(i%%X_sample_num)+1]]
-            
-            if(family == "guassian"){
-                y <- X %*% beta + eval(noise)
-            } else{
-                suc_prob <- exp(X %*% beta) / (exp(X %*% beta) + 1)
-                y <- sapply(1:n, function(obs_i){
-                    rbinom(1, 1, suc_prob[obs_i])
-                })
-            }
-            
-            if("sigma_tilde" %in% names(formals(statistic))){
-                kn_stats_obs <- statistic(X, X_kn, y, sigma_tilde = 1)
-            } else{
-                kn_stats_obs <- statistic(X, X_kn, y)
-            }
-            
-            rejs_mxKn <- ckn.modelX:::kn.select(kn_stats_obs, alpha, selective = T, early_stop = F)$selected
-            power_sample <- calc_FDP_power(rejs_mxKn, H0)[2]
-            
-            return(power_sample)
-        })
-        mean(power) - target
-    }
-    
-    lower <- 0
-    upper <- 10
-    while (TRUE & upper < 1000){
-        tmp <- try(uniroot(sel_power, c(lower, upper))$root)
-        if (class(tmp) == "try-error"){
-            upper <- upper * 2
-        } else {
-            return(tmp)
-        }
-    }
-    return(NA)
-}
-```
 
 # my stuff
 
@@ -459,29 +192,6 @@ return(list(fdr = fdr, power = pwr))
 }
 ```
 
-```{r}
- # OLD VERSION - DO NOT USE
-# not exactly the simulation used in the LFL paper, due to computation concerns, but similar
-run_sarkar_tang_method1_mcc_lfl_setting_simulation <- function(type = 'MCC', a_vec = c(2, 4, 6, 8, 10), 
-                                                               alpha = .05, 
-                                                               num_iter = 500){
-  result_vec_power <- c()
-  result_vec_fdr <- c()
-  for (amp in a_vec){
-    result <- run_sarkar_tang_method1_mcc_simulation(type = type,
-                                          n = 1000,
-                                          d = 250,
-                                          a = amp, 
-                                          num_true_sigs = 10,
-                                          alpha = alpha,
-                                          num_iter = num_iter)
-    result_vec_power <- c(result_vec_power, result$power)
-    result_vec_fdr <- c(result_vec_fdr, result$fdr)
-  }
-  return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
-}
-```
-
 
 ```{r}
 run_bh_mcc_simulation <- function(type = 'MCC', n, d, a, num_true_sigs, alpha = .05, num_iter = 500){
@@ -506,27 +216,6 @@ return(list(fdr = fdr, power = pwr))
 }
 ```
 
-```{r}
-# OLD VERSION - DO NOT USE
-run_bh_mcc_lfl_setting_simulation <- function(type = 'MCC', a_vec = c(2, 4, 6, 8, 10), 
-                                                               alpha = .05, 
-                                                               num_iter = 500){
-  result_vec_power <- c()
-  result_vec_fdr <- c()
-  for (amp in a_vec){
-    result <- run_bh_mcc_simulation(type = type,
-                                          n = 1000,
-                                          d = 250,
-                                          a = amp, 
-                                          num_true_sigs = 10,
-                                          alpha = alpha,
-                                          num_iter = num_iter)
-    result_vec_power <- c(result_vec_power, result$power)
-    result_vec_fdr <- c(result_vec_fdr, result$fdr)
-  }
-  return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
-}
-```
 
 ```{r}
 run_ep_moment_method_mcc_simulation <- function(type = 'MCC', n, d, a, num_true_sigs, 
@@ -558,32 +247,6 @@ return(list(fdr = fdr, power = pwr))
 
 
 ```{r}
- # OLD VERSION - DO NOT USE
-run_ep_moment_method_mcc_lfl_setting_simulation <- function(type = 'MCC', a_vec = c(2, 4, 6, 8, 10), 
-                                               num_iter = 500, 
-                                               moment = 2,
-                                               alpha = .05,
-                                               dampen = FALSE){
-result_vec_power <- c()
-result_vec_fdr <- c()
-for (amp in a_vec){
-  result <- run_ep_moment_method_mcc_simulation(type= type,
-                                          n = 1000,
-                                          d = 250,
-                                          a = amp, 
-                                          num_true_sigs = 10,
-                                          moment = moment,
-                                          alpha = alpha,
-                                          num_iter = num_iter,
-                                          dampen = dampen)
-  result_vec_power <- c(result_vec_power, result$power)
-  result_vec_fdr <- c(result_vec_fdr, result$fdr)
-}
-return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
-}
-```
-
-```{r}
 run_ep_moment_method_alternate_mcc_simulation <- function(type = 'MCC', n, d, a, num_true_sigs, 
                                                           alpha = .05, 
                                                           num_iter = 500, 
@@ -611,31 +274,7 @@ return(list(fdr = fdr, power = pwr))
 }
 ```
 
-```{r}
-# OLD VERSION - DO NOT USE
-run_ep_moment_method_alternate_mcc_lfl_setting_simulation <- function(type = 'MCC', a_vec = c(2, 4, 6, 8, 10), 
-                                               alpha = .05,
-                                               num_iter = 500, 
-                                               moment = 2,
-                                               dampen = FALSE){
-result_vec_power <- c()
-result_vec_fdr <- c()
-for (amp in a_vec){
-  result <- run_ep_moment_method_alternate_mcc_simulation(type = type,
-                                          n = 1000,
-                                          d = 250,
-                                          a = amp, 
-                                          num_true_sigs = 10,
-                                          moment = moment,
-                                          alpha = alpha,
-                                          num_iter = num_iter,
-                                          dampen = dampen)
-  result_vec_power <- c(result_vec_power, result$power)
-  result_vec_fdr <- c(result_vec_fdr, result$fdr)
-}
-return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
-}
-```
+
 
 ```{r}
 run_knockoffs_mcc_simulation <- function(type = 'MCC', n, d, a, num_true_sigs, alpha = .05, method = 'equi', num_iter = 500){
@@ -695,321 +334,8 @@ return(list(fdr = fdr, power = pwr))
 ```
 
 
-```{r}
- # OLD VERSION - DO NOT USE
-run_knockoffs_mcc_lfl_setting_simulation <- function(type = 'MCC', 
-                                                     a_vec = c(2, 4, 6, 8, 10), 
-                                              alpha = .05,
-                                              method = 'equi',
-                                               num_iter = 500){
-result_vec_power <- c()
-result_vec_fdr <- c()
-for (amp in a_vec){
-  result <- run_knockoffs_mcc_simulation(type = type,
-                                         n = 1000,
-                                          d = 250,
-                                          a = amp,
-                                          alpha = alpha,
-                                          num_true_sigs = 10,
-                                         method = method,
-                                          num_iter = num_iter)
-  result_vec_power <- c(result_vec_power, result$power)
-  result_vec_fdr <- c(result_vec_fdr, result$fdr)
-}
-return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
-}
-```
 
-# simulations
-
-```{r}
-set.seed(12)
-method1_lfl_setting_mcc <- run_sarkar_tang_method1_mcc_lfl_setting_simulation()
-```
-
-```{r}
-set.seed(12)
-method1_lfl_setting_mcc_block <- run_sarkar_tang_method1_mcc_lfl_setting_simulation(type = 'MCC_Block')
-```
-
-```{r}
-set.seed(12)
-ep_moment_method_lfl_setting_mcc <- run_ep_moment_method_mcc_lfl_setting_simulation()
-```
-
-```{r}
-set.seed(12)
-ep_moment_method_lfl_setting_mcc_block <- run_ep_moment_method_mcc_lfl_setting_simulation(type = 'MCC_Block')
-```
-
-```{r}
-set.seed(12)
-ep_moment_method_alternate_lfl_setting_mcc <- run_ep_moment_method_alternate_mcc_lfl_setting_simulation()
-```
-
-```{r}
-set.seed(12)
-ep_moment_method_alternate_lfl_setting_mcc_block <- run_ep_moment_method_alternate_mcc_lfl_setting_simulation(type = 'MCC_Block')
-```
-
-```{r}
-set.seed(12)
-knockoffs_equi_lfl_setting_mcc <- run_knockoffs_mcc_lfl_setting_simulation()
-```
-
-```{r}
-set.seed(12)
-knockoffs_equi_lfl_setting_mcc_block <- run_knockoffs_mcc_lfl_setting_simulation(type = 'MCC_Block')
-```
-
-```{r}
-set.seed(12)
-knockoffs_sdp_lfl_setting_mcc <- run_knockoffs_mcc_lfl_setting_simulation(method = 'sdp')
-```
-
-
-```{r}
-set.seed(12)
-knockoffs_sdp_lfl_setting_mcc_block <- run_knockoffs_mcc_lfl_setting_simulation(type = 'MCC_Block', method = 'sdp')
-```
-
-## small scale simulations
-
-```{r}
-set.seed(12)
-run_sarkar_tang_method1_mcc_lfl_setting_simulation(type = 'MCC_Block', num_iter = 30)
-```
-
-```{r}
-set.seed(12)
-run_sarkar_tang_method1_mcc_lfl_setting_simulation(type = 'MCC', num_iter = 30)
-```
-
-
-```{r}
-set.seed(12)
-run_sarkar_tang_method1_mcc_lfl_setting_simulation(type = 'MCC', num_iter = 30)
-```
-
-
-```{r}
-set.seed(12)
-run_sarkar_tang_method1_mcc_lfl_setting_simulation(a_vec = c(16, 20, 24, 30), type = 'MCC', num_iter = 30)
-```
-
-```{r}
-set.seed(12)
-# with centering and scaling of the design matrix
-run_sarkar_tang_method1_mcc_lfl_setting_simulation(a_vec = c(16, 20, 24, 30), type = 'MCC', num_iter = 30)
-```
-
-```{r}
-set.seed(12)
-run_ep_moment_method_alternate_mcc_lfl_setting_simulation(a_vec = c(16, 20, 24, 30), num_iter = 10)
-```
-
-```{r}
-set.seed(12)
-# with scaling and centering of the design matrix
-run_ep_moment_method_alternate_mcc_lfl_setting_simulation(a_vec = c(16, 20, 24, 30), num_iter = 10)
-```
-
-
-```{r}
-set.seed(12)
-run_ep_moment_method_mcc_lfl_setting_simulation(num_iter = 20)
-```
-
-```{r}
-set.seed(12)
-run_ep_moment_method_mcc_lfl_setting_simulation(a_vec = c(16, 20, 24, 30), num_iter = 20)
-```
-
-```{r}
-set.seed(12)
-run_knockoffs_mcc_lfl_setting_simulation(a_vec = c(8, 10, 16), type = 'MCC_Block', method = 'sdp', alpha = .1, num_iter = 20)
-```
-
-```{r}
-set.seed(12)
-run_knockoffs_mcc_lfl_setting_simulation(a_vec = c(8, 10, 16), type = 'MCC_Block', method = 'sdp', alpha = .2, num_iter = 20)
-```
-
-
-
-# small scale - trying to get a rough calibration of the BH
-
-we choose $\beta^*$ such that base BH with $\alpha = .20$ has power of about 35% for the setting. In some of the experiments below, we approximated the power to be 50%, but in the full scale simulation, the power ended up being 35%. 
-
-## mcc
-
-
-```{r}
-set.seed(12)
-run_bh_mcc_lfl_setting_simulation(a_vec = c(4, 6, 7, 8), alpha = .2, num_iter = 30)
-```
-
-
-```{r}
-set.seed(12)
-run_bh_mcc_lfl_setting_simulation(a_vec = c(3, 3.5, 4), alpha = .2, num_iter = 30)
-```
-
-```{r}
-set.seed(13)
-run_bh_mcc_lfl_setting_simulation(a_vec = c(3.05, 3.25), alpha = .2, num_iter = 100)
-```
-
-
-```{r}
-set.seed(14)
-run_bh_mcc_lfl_setting_simulation(a_vec = c(3.5, 4), alpha = .2, num_iter = 100)
-```
-
-```{r}
-set.seed(15)
-run_bh_mcc_lfl_setting_simulation(a_vec = c(3.55, 3.6), alpha = .2, num_iter = 100)
-```
-
-
-```{r}
-set.seed(16)
-run_bh_mcc_lfl_setting_simulation(a_vec = c(3.6, 3.65), alpha = .2, num_iter = 100)
-```
-
-```{r}
-set.seed(17)
-run_bh_mcc_lfl_setting_simulation(a_vec = c(3.63), alpha = .2, num_iter = 200)
-```
-
-mcc calibration is $\beta^* \approx 3.63$. 
-
-## mcc block
-
-
-```{r}
-set.seed(17)
-run_bh_mcc_lfl_setting_simulation(type = 'MCC_Block', a_vec = c(2, 4, 6), alpha = .2, num_iter = 30)
-```
-
-```{r}
-set.seed(17)
-run_bh_mcc_lfl_setting_simulation(type = 'MCC_Block', a_vec = c(3, 3.5), alpha = .2, num_iter = 100)
-```
-
-```{r}
-set.seed(18)
-run_bh_mcc_lfl_setting_simulation(type = 'MCC_Block', a_vec = c(3.3, 3.4), alpha = .2, num_iter = 100)
-```
-
-```{r}
-set.seed(19)
-run_bh_mcc_lfl_setting_simulation(type = 'MCC_Block', a_vec = c(3.2), alpha = .2, num_iter = 200)
-```
-
-```{r}
-set.seed(20)
-run_bh_mcc_lfl_setting_simulation(type = 'MCC_Block', a_vec = c(3.2), alpha = .2, num_iter = 300)
-```
-
-
-mcc block calibration is $\beta^* \approx 3.2$.
-
-
-
-## IID normal
-
-```{r}
-set.seed(20)
-run_bh_mcc_lfl_setting_simulation(type = 'IID_Normal', a_vec = c(2, 4, 6), alpha = .2, num_iter = 200)
-```
-
-```{r}
-set.seed(21)
-run_bh_mcc_lfl_setting_simulation(type = 'IID_Normal', a_vec = c(.5, 1), alpha = .2, num_iter = 200)
-```
-
-```{r}
-set.seed(21)
-run_bh_mcc_lfl_setting_simulation(type = 'IID_Normal', a_vec = c(.1, .2), alpha = .2, num_iter = 200)
-```
-
-
-```{r}
-set.seed(22)
-run_bh_mcc_lfl_setting_simulation(type = 'IID_Normal', a_vec = c(.03, .05), alpha = .2, num_iter = 200)
-```
-
-```{r}
-set.seed(23)
-run_bh_mcc_lfl_setting_simulation(type = 'IID_Normal', a_vec = c(.06, .08), alpha = .2, num_iter = 200)
-```
-
-```{r}
-set.seed(24)
-run_bh_mcc_lfl_setting_simulation(type = 'IID_Normal', a_vec = c(.07), alpha = .2, num_iter = 500)
-```
-
-```{r}
-set.seed(25)
-run_bh_mcc_lfl_setting_simulation(type = 'IID_Normal', a_vec = c(.073), alpha = .2, num_iter = 800)
-```
-
-```{r}
-set.seed(30)
-run_bh_mcc_lfl_setting_simulation(type = 'IID_Normal', a_vec = c(.073), alpha = .2, num_iter = 1000)
-```
-
-for IID normal, we have $\beta^* \approx .073$. 
-
-## X_AR
-
-
-
-```{r}
-set.seed(24)
-run_bh_mcc_lfl_setting_simulation(type = 'X_AR', a_vec = c(2, 4, 6), alpha = .2, num_iter = 300)
-```
-
-
-```{r}
-set.seed(24)
-run_bh_mcc_lfl_setting_simulation(type = 'X_AR', a_vec = c(2.5, 3, 3.5), alpha = .2, num_iter = 300)
-```
-
-```{r}
-set.seed(25)
-run_bh_mcc_lfl_setting_simulation(type = 'X_AR', a_vec = c(2.6, 2.7, 2.8), alpha = .2, num_iter = 300)
-```
-
-```{r}
-set.seed(25)
-run_bh_mcc_lfl_setting_simulation(type = 'X_AR', a_vec = c(2.83, 2.85), alpha = .2, num_iter = 400)
-```
-
-```{r}
-set.seed(26)
-run_bh_mcc_lfl_setting_simulation(type = 'X_AR', a_vec = c(2.85), alpha = .2, num_iter = 500)
-```
-
-```{r}
-set.seed(27)
-run_bh_mcc_lfl_setting_simulation(type = 'X_AR', a_vec = c(2.83), alpha = .2, num_iter = 800)
-```
-
-```{r}
-set.seed(31)
-run_bh_mcc_lfl_setting_simulation(type = 'X_AR', a_vec = c(2.83), alpha = .2, num_iter = 1000)
-```
-
-```{r}
-set.seed(31)
-run_bh_mcc_lfl_setting_simulation(type = 'X_AR', a_vec = c(2.83), alpha = .2, num_iter = 1000)
-```
-
-for X_AR, we have $\beta^* \approx 2.83$. 
-
-# new versions of the functions
+# Setting simulation functions for each method
 
 ```{r}
 run_sarkar_tang_method1_mcc_lfl_setting_simulation <- function(type = 'MCC', a_vec = c(2, 4, 6, 8, 10), 
@@ -1226,18 +552,48 @@ run_CKnockoffs_mcc_lfl_setting_simulation <- function(type = 'MCC',
 }
 ```
 
-# simulations, attempt 2
+
+# small scale - trying to get a rough calibration of the BH
+
+we choose $\beta^*$ such that base BH with $\alpha = .20$ has power of about 35% for the setting. In some of the experiments below, we approximated the power to be 50%, but in the full scale simulation, the power ended up being 35%. 
+
+## mcc
 
 
 ```{r}
-set.seed(13)
-p <- 100; n <- 300; k <- 15
-reg <- get_regression_model(n, p, num_true_signals = k, a = 3.5, random_true_signal_indices = TRUE)
-print(reg$nonzero_indices)
+set.seed(17)
+run_bh_mcc_lfl_setting_simulation(a_vec = c(3.63), alpha = .2, num_iter = 200)
+```
 
-# Basic usage
-result <- cknockoff(reg$X, reg$Y, intercept = FALSE, alpha = 0.05, n_cores = 1)
-print(result$selected)
+mcc calibration is $\beta^* \approx 3.63$. 
+
+## mcc block
+
+
+```{r}
+set.seed(20)
+run_bh_mcc_lfl_setting_simulation(type = 'MCC_Block', a_vec = c(3.2), alpha = .2, num_iter = 300)
 ```
 
 
+mcc block calibration is $\beta^* \approx 3.2$.
+
+
+
+## IID normal
+
+```{r}
+set.seed(30)
+run_bh_mcc_lfl_setting_simulation(type = 'IID_Normal', a_vec = c(.073), alpha = .2, num_iter = 1000)
+```
+
+for IID normal, we have $\beta^* \approx .073$. 
+
+## X_AR
+
+```{r}
+set.seed(31)
+run_bh_mcc_lfl_setting_simulation(type = 'X_AR', a_vec = c(2.83), alpha = .2, num_iter = 1000)
+```
+
+for X_AR, we have $\beta^* \approx 2.83$. 
