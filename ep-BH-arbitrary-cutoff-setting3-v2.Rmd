@@ -13,6 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 run_ep_method1_cutoff_setting3_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
                                                alpha = .05,
                                                cutoff = .2,
+                                               multiplier = 1.9,
                                                num_iter = 500){
 result_vec_power <- c()
 result_vec_fdr <- c()
@@ -23,6 +24,7 @@ for (amp in a_vec){
                                           num_true_sigs = 20,
                                           alpha = alpha,
                                           cutoff = cutoff,
+                                          multiplier = multiplier,
                                           num_iter = num_iter)
   result_vec_power <- c(result_vec_power, result$power)
   result_vec_fdr <- c(result_vec_fdr, result$fdr)

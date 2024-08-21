@@ -66,17 +66,59 @@ return(list(fdr = fdr, power = pwr))
 
 
 ```{r}
-# not exactly the simulation used in the LFL paper, due to computation concerns, but similar
-run_bh_lfl_setting_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+run_bh_setting1_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
                                                                alpha = .05, 
                                                                num_iter = 500){
   result_vec_power <- c()
   result_vec_fdr <- c()
   for (amp in a_vec){
-    result <- run_bh_mcc_simulation(n = 1000,
-                                          d = 250,
+    result <- run_bh_simulation(n = 200,
+                                          d = 40,
+                                          a = amp, 
+                                          num_true_sigs = 8,
+                                          alpha = alpha,
+                                          num_iter = num_iter)
+    result_vec_power <- c(result_vec_power, result$power)
+    result_vec_fdr <- c(result_vec_fdr, result$fdr)
+  }
+  return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+
+```{r}
+# not exactly the simulation used in the LFL paper, due to computation concerns, but similar
+run_bh_setting2_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                                               alpha = .05, 
+                                                               num_iter = 500){
+  result_vec_power <- c()
+  result_vec_fdr <- c()
+  for (amp in a_vec){
+    result <- run_bh_simulation(n = 500,
+                                          d = 50,
                                           a = amp, 
                                           num_true_sigs = 10,
+                                          alpha = alpha,
+                                          num_iter = num_iter)
+    result_vec_power <- c(result_vec_power, result$power)
+    result_vec_fdr <- c(result_vec_fdr, result$fdr)
+  }
+  return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
+}
+```
+
+```{r}
+# not exactly the simulation used in the LFL paper, due to computation concerns, but similar
+run_bh_setting3_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
+                                                               alpha = .05, 
+                                                               num_iter = 500){
+  result_vec_power <- c()
+  result_vec_fdr <- c()
+  for (amp in a_vec){
+    result <- run_bh_simulation(n = 1000,
+                                          d = 100,
+                                          a = amp, 
+                                          num_true_sigs = 20,
                                           alpha = alpha,
                                           num_iter = num_iter)
     result_vec_power <- c(result_vec_power, result$power)

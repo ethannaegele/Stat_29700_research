@@ -19,10 +19,10 @@ This document runs the same simulations that were in the ep-BH-arbitrary-cutoff-
 
 ```{r}
 # making an ep-BH function with arbitrary cutoff, to test the effect of cutoffs better
-ep_sarkar_tang_method1_cutoff <- function(X, Y, alpha = .05, cutoff = .2){
+ep_sarkar_tang_method1_cutoff <- function(X, Y, alpha = .05, cutoff = .2, multiplier = 1.9){
   d <- ncol(X)
   nu <- nrow(X) - 2 * d # n - 2d assuming n > 2d
-  T1 <- get_T_1(X, Y)
+  T1 <- get_T_1(X, Y, multiplier = multiplier)
   T2 <- get_T_2(X, Y)
   P_t1 <- pf(T1^2, 1, nu, lower.tail = FALSE) # to calculate probabilities with the t^2_n distribution, have to use the F(1, n) distribution
   P_t2 <- pf(T2^2, 1, nu, lower.tail = FALSE)
@@ -34,7 +34,9 @@ ep_sarkar_tang_method1_cutoff <- function(X, Y, alpha = .05, cutoff = .2){
 
 
 ```{r}
-run_ep_method1_cutoff_simulation <- function(n, d, a, num_true_sigs, alpha = .05, cutoff = .2, num_iter = 300){
+run_ep_method1_cutoff_simulation <- function(n, d, a, num_true_sigs, alpha = .05, cutoff = .2,
+                                             multiplier = 1.9,
+                                             num_iter = 300){
   # Sets up the regression problem with specified dimensions and number of true signals, all of which have
   # the same amplitude. 
   fdp_vec <- numeric(num_iter)
@@ -43,7 +45,8 @@ for (m in 1:num_iter){
   feature_indices <- 1:d
   regression <- get_regression_model(n = n, d = d, a = a, num_true_signals = num_true_sigs)
   true_nonzero_indices <- regression$nonzero_indices
-  rejected_indices <- ep_sarkar_tang_method1_cutoff(regression$X, regression$Y, alpha = alpha, cutoff = cutoff)
+  rejected_indices <- ep_sarkar_tang_method1_cutoff(regression$X, regression$Y, alpha = alpha, cutoff = cutoff,
+                                                    multiplier = multiplier)
   num_rejections <- length(rejected_indices)
   num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
   num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
@@ -62,6 +65,7 @@ return(list(fdr = fdr, power = pwr))
 run_ep_method1_cutoff_setting1_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
                                                alpha = .05,
                                                cutoff = .2,
+                                               multiplier = 1.9,
                                                num_iter = 500){
 result_vec_power <- c()
 result_vec_fdr <- c()
@@ -72,6 +76,7 @@ for (amp in a_vec){
                                           num_true_sigs = 8,
                                           alpha = alpha,
                                           cutoff = cutoff,
+                                          multiplier = multiplier,
                                           num_iter = num_iter)
   result_vec_power <- c(result_vec_power, result$power)
   result_vec_fdr <- c(result_vec_fdr, result$fdr)

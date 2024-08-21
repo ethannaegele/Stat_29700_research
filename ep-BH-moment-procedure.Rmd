@@ -158,7 +158,7 @@ ep_moment_method1_2_sigma <- function(X, Y, alpha = .05, sigma = 1, moment = 2, 
 THE METHOD BELOW IS THEORETICALLY KNOWN TO CONTROL FDR AT $\pi_0 \alpha$ DUE TO THEOREM 4 OF THE EP-BH PAPER
 
 ```{r}
-ep_moment_method1_3_sigma <- function(X, Y, alpha = .05, sigma = 1, moment = 2, dampen = FALSE){
+ep_moment_method1_3_sigma <- function(X, Y, alpha = .05, sigma = 1, moment = 2, dampen = FALSE, multiplier = 1.9){
   # In this setting, sigma is known
   # check that moment is an even integer
   if (!is.numeric(moment) | moment %% 2 != 0 | moment <= 0) {
@@ -168,15 +168,18 @@ ep_moment_method1_3_sigma <- function(X, Y, alpha = .05, sigma = 1, moment = 2, 
   standard_gaussian_moment <- DoubleFactorial(moment - 1) # formula for the even moments of standard Gaussian
   
   sigma_mat <- t(X) %*% X
-  equi <- create_equicorrelated_mult(X, multiplier = 1.98) # USE THE MODIFIED FUNCTION FOR BETTER MATRIX CONDITION
-  D <- equi$D
-  X_ko <- equi$Xk
-  two_sigma_minus_D_inv <- solve(2 * sigma_mat - D)
-  beta_hat_1 <- two_sigma_minus_D_inv %*% t(X + X_ko) %*% Y
-  beta_hat_2 <- solve(D) %*% t(X - X_ko) %*% Y # as defined in section 2 of sarkar and tang
+  equi <- create_equicorrelated_mult(X, multiplier = multiplier) # USE THE MODIFIED FUNCTION FOR BETTER MATRIX CONDITION
+  D1 <- equi$D
+  X_ko1 <- equi$Xk
+  two_sigma_minus_D_inv <- solve(2 * sigma_mat - D1)
+  beta_hat_1 <- two_sigma_minus_D_inv %*% t(X + X_ko1) %*% Y
+  
+  D2 <- diag(create.solve_equi(t(X) %*% X))
+  X_ko2 <- create.fixed(X, method = 'equi')$Xk
+  beta_hat_2 <- solve(D2) %*% t(X - X_ko2) %*% Y # as defined in section 2 of sarkar and tang
  
   beta_hat_1_sds <- sqrt(diag(2 * sigma^2 * two_sigma_minus_D_inv)) # standard deviation of the beta_1 coefficient estimates
-  beta_hat_2_sds <- sqrt(diag(2 * sigma^2 * solve(D))) # standard deviation of the beta_2 coefficient estimates
+  beta_hat_2_sds <- sqrt(diag(2 * sigma^2 * solve(D2))) # standard deviation of the beta_2 coefficient estimates
   z_scores <- beta_hat_2 / beta_hat_2_sds
   p_values <- 2 * (1 - pnorm(abs(z_scores)))
 
@@ -219,12 +222,14 @@ f_distribution_kth_moment <- function(d1, d2, k) {
 # valid p values and e values. The p values are not independent, but since the p values are approximately equal to 
 # p values one would get from the known sigma case, they are "approximately independent" 
 # and empirically, the method controls the FDR in the cases I have examined.
-ep_moment_method <- function(X, Y, alpha = .05, moment = 2, dampen = FALSE){
+ep_moment_method <- function(X, Y, alpha = .05, moment = 2, sigma = NULL, dampen = FALSE, multiplier = 1.9){
   # check that moment is an even integer
   if (!is.numeric(moment) | moment %% 2 != 0 | moment <= 0) {
     stop("Moment must be a positive even integer.")
   }
   
+  if (is.null(sigma)){
+  # the unknown variance version of the method
   nu <- nrow(X) - 2 * ncol(X)
   
   if (moment == 2){
@@ -236,7 +241,7 @@ ep_moment_method <- function(X, Y, alpha = .05, moment = 2, dampen = FALSE){
   
   
   sigma_mat <- t(X) %*% X
-  equi <- create_equicorrelated_mult(X, multiplier = 1.98) # USE THE MODIFIED FUNCTION FOR BETTER MATRIX CONDITION
+  equi <- create_equicorrelated_mult(X, multiplier = multiplier) # USE THE MODIFIED FUNCTION FOR BETTER MATRIX CONDITION
   D <- equi$D
   X_ko <- equi$Xk
   two_sigma_minus_D_inv <- solve(2 * sigma_mat - D)
@@ -256,19 +261,38 @@ ep_moment_method <- function(X, Y, alpha = .05, moment = 2, dampen = FALSE){
   }
   
   rejected_indices <- ep_BH(p_values = P_t2, e_values = e_values, alpha = alpha)
+  }
+  
+  else if (sigma <= 0 | !is.numeric(sigma)){
+    stop("Variance parameter sigma must be positive.")
+  }
+  else{
+    rejected_indices <- ep_moment_method1_3_sigma(X, Y, 
+                                                  alpha = alpha, 
+                                                  sigma = sigma, 
+                                                  moment = moment, 
+                                                  dampen = dampen, 
+                                                  multiplier = multiplier)
+  }
   return(rejected_indices)
+  
 }
 ```
 
 
 ```{r}
-ep_moment_method_alternate <- function(X, Y, alpha = .05, moment = 2, dampen = FALSE){
+ep_moment_method_alternate <- function(X, Y, alpha = .05, moment = 2, dampen = FALSE, multiplier = 1.9){
   # this function is an attempt at an alternate approach to the moment method, where
   # we instead estimate sigma with sigma_hat and use the method for when sigma is known, assuming that
   # sigma_hat is equal to sigma.
-  X_ko <-  create_equicorrelated_mult(X, multiplier = 1.98)$Xk
+  X_ko <-  create_equicorrelated_mult(X, multiplier = multiplier)$Xk
   sigma_hat <- get_variance_parameter_estimate(cbind(X, X_ko), Y)
-  rejected_indices <- ep_moment_method1_3_sigma(X, Y, alpha = alpha, sigma = sigma_hat, moment = moment, dampen = dampen)
+  rejected_indices <- ep_moment_method1_3_sigma(X, Y, 
+                                                alpha = alpha, 
+                                                sigma = sigma_hat, 
+                                                moment = moment, 
+                                                dampen = dampen,
+                                                multiplier = multiplier)
   return(rejected_indices)
 }
 ```

@@ -53,19 +53,11 @@ get_variance_parameter_estimate <- function(X, Y){
 ```{r}
 # get the T_1  estimate provided at the beginning of section 2
 # SQRTM USES THE PRACMA VERSION HERE CURRENTLY
-get_T_1 <- function(X, Y, equicor = TRUE){
+get_T_1 <- function(X, Y, multiplier = 1.9){
   sigma <- t(X) %*% X
-  if (equicor){
-  equi <- create_equicorrelated_mult(X, multiplier = 1.98) # TRYING TO USE THE MODIFIED FUNCTION FOR BETTER MATRIX CONDITION
+  equi <- create_equicorrelated_mult(X, multiplier = multiplier) # TRYING TO USE THE MODIFIED FUNCTION FOR BETTER MATRIX CONDITION
   D <- equi$D # need to turn the output into a diagonal matrix
   X_ko <- equi$Xk
-    #D <- diag(create.solve_equi(sigma)) # this appears to give 0 power?
-   # X_ko <- create.fixed(X, method = 'equi')$Xk 
-  }
-  else{
-    D <- diag(create.solve_sdp(sigma) + rnorm(ncol(X), mean = 0, sd = .01))
-    X_ko <- create.fixed(X, method = 'sdp')$Xk
-  }
   
   beta_hat_1 <- solve(2 * sigma - D) %*% t(X + X_ko) %*% Y
   # tau hat estimated with the columnwise concatenation of X and knockoff X
@@ -75,16 +67,9 @@ get_T_1 <- function(X, Y, equicor = TRUE){
 }
 
 # get the T_2 estimate 
-get_T_2 <- function(X, Y, equicor = TRUE){
-  if (equicor){
-    D <- diag(create.solve_equi(t(X) %*% X)) # note: D calculated in slightly different ways for T1 and T2; this does not seem to make much of a difference in the overall results
+get_T_2 <- function(X, Y){
+    D <- diag(create.solve_equi(t(X) %*% X)) # note: D calculated in slightly different ways for T1 and T2; simulations show power is slightly higher through this approach
   X_ko <- create.fixed(X, method = 'equi')$Xk
-  }
-  else{
-    D <- diag(create.solve_sdp(t(X) %*% X) + rnorm(ncol(X), mean = 0, sd = .01))
-    X_ko <- create.fixed(X, method = 'sdp')$Xk
-  }
-  
   beta_hat_2 <- solve(D) %*% t(X - X_ko) %*% Y
   T_2 <- (1 / (get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2))) * sqrtm(D)$B %*% beta_hat_2
   return(T_2)
@@ -138,16 +123,11 @@ return(list('X' = X, 'Y' = Y, 'nonzero_indices' = nonzero_indices))
 
 
 ```{r}
-get_regression_model(n = 100, d = 10, a = 2, num_true_signals = 1)
-```
-
-
-```{r}
-sarkar_tang_method1 <- function(X, Y, alpha = .05, equicor = TRUE){
+sarkar_tang_method1 <- function(X, Y, alpha = .05, multiplier = 1.9){
   d <- ncol(X)
   nu <- nrow(X) - 2 * d # n - 2d assuming n > 2d
-  T1 <- get_T_1(X, Y, equicor = equicor)
-  T2 <- get_T_2(X, Y, equicor = equicor)
+  T1 <- get_T_1(X, Y, multiplier = multiplier)
+  T2 <- get_T_2(X, Y) # some simulations showed that power is highest when you only use multiplier for T1
   P_t1 <- pf(T1^2, 1, nu, lower.tail = FALSE) # to calculate probabilities with the t^2_n distribution, have to use the F(1, n) distribution
   P_t2 <- pf(T2^2, 1, nu, lower.tail = FALSE)
   P_tilde <- numeric(d)
@@ -168,43 +148,11 @@ sarkar_tang_method1 <- function(X, Y, alpha = .05, equicor = TRUE){
 
 
 ```{r}
-# Sarkar and Tang method 1 attempt
-set.seed(12)
-num_iterations <- 300
-fdp_vec <- numeric(num_iterations)
-pwr_vec <- c(num_iterations)
-for (m in 1:num_iterations){
-  num_true_signals <- 8
-  d <- 40
-  feature_indices <- 1:d
-  regression <- get_regression_model(n = 200, d = d, a = 8, num_true_signals = num_true_signals)
-  true_nonzero_indices <- regression$nonzero_indices
-  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .05)
-  num_rejections <- length(rejected_indices)
-  num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
-  num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
-  fdp_vec[m] <- num_false_rejections / max(num_rejections, 1)
-  pwr_vec[m] <- num_correct_rejections / max(true_nonzero_indices, 1)
-}
-fdr <- mean(fdp_vec)
-pwr <- mean(pwr_vec)
-fdr
-pwr
-```
-
-
-```{r}
 condition_number_test_sdp <- function(X){
   sigma <- t(X) %*% X
   D <- diag(create.solve_sdp(sigma))
   return(rcond(2 * sigma - D))
 }
-```
-
-```{r}
-reg <- get_regression_model(200, 40, 2, num_true_signals = 8)
-condition_number_test_sdp(reg$X)
-solve(t(reg$X) %*% reg$X)
 ```
 
 
@@ -224,6 +172,22 @@ condition_number_test_equi_mult <- function(X, multiplier = 2){
   return(rcond(2 * sigma - D))
 }
 ```
+
+```{r} 
+# example showing how the conditioning of the matrix changes based on choice of multiplier
+set.seed(12)
+reg <- get_regression_model(n = 200, d = 40, a = 4, num_true_signals = 8)
+sapply(c(2, 1.98, 1.96, 1.9, 1.8), function(mult) condition_number_test_equi_mult(reg$X, multiplier = mult))
+```
+
+```{r}
+# example showing how much this changes the D matrix
+set.seed(12)
+reg <- get_regression_model(n = 200, d = 40, a = 4, num_true_signals = 8)
+unique(diag(create_equicorrelated_mult(reg$X, multiplier = 2)$D))
+unique(diag(create_equicorrelated_mult(reg$X, multiplier = 1.9)$D))
+```
+
 
 # Simulations for Method 1
 

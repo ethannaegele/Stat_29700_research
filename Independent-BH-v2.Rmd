@@ -18,6 +18,17 @@ library(tidyverse)
 This document runs the same simulations that were in the Sarkar-Tang-replication-specific-functions file but now with a corrected function for the variance parameter estimate, where the linear model does not try to calculate an intercept term. We also run the simulations using wrapper functions to save space. 
 
 ```{r}
+independent_BH <- function(X, Y, alpha = .05){
+  nu <- nrow(X) - 2 * ncol(X)
+  T2 <- get_T_2(X, Y)
+  P <- pf(T2^2, 1, nu, lower.tail = FALSE)
+  P_BH <- p.adjust(P, method = "BH")
+  rejected_indices <- which(P_BH <= alpha)
+  return(rejected_indices) # the indices of the features that the test concludes are nonzero
+}
+```
+
+```{r}
 run_independent_BH_simulation <- function(n, d, a, num_true_sigs, num_iter = 300){
   # Sets up the regression problem with specified dimensions and number of true signals, all of which have
   # the same amplitude. 

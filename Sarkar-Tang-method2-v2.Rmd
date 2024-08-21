@@ -20,10 +20,10 @@ This document runs the same simulations that were in the Sarkar and Tang method 
 # Method 2 from Sarkar and Tang
 
 ```{r}
-sarkar_tang_method2 <- function(X, Y, alpha = .05, eta = .7){
+sarkar_tang_method2 <- function(X, Y, alpha = .05, eta = .7, multiplier = 1.9){
   d <- ncol(X)
   nu <- nrow(X) - 2 * d # n - 2d assuming n > 2d
-  T1 <- get_T_1(X, Y)
+  T1 <- get_T_1(X, Y, multiplier = multiplier)
   T2 <- get_T_2(X, Y)
   P_t1 <- pf(T1^2, 1, nu, lower.tail = FALSE) # to calculate probabilities with the t^2_n distribution, have to use the F(1, n) distribution
   P_t2 <- pf(T2^2, 1, nu, lower.tail = FALSE)
@@ -46,7 +46,7 @@ sarkar_tang_method2 <- function(X, Y, alpha = .05, eta = .7){
 
 
 ```{r}
-run_method2_simulation <- function(n, d, a, num_true_sigs, eta = .7, num_iter = 300){
+run_method2_simulation <- function(n, d, a, num_true_sigs, eta = .7, multiplier = 1.9, num_iter = 300){
   # Sets up the regression problem with specified dimensions and number of true signals, all of which have
   # the same amplitude. 
   fdp_vec <- numeric(num_iter)
@@ -55,7 +55,7 @@ for (m in 1:num_iter){
   feature_indices <- 1:d
   regression <- get_regression_model(n = n, d = d, a = a, num_true_signals = num_true_sigs)
   true_nonzero_indices <- regression$nonzero_indices
-  rejected_indices <- sarkar_tang_method2(regression$X, regression$Y, alpha = .05, eta = eta)
+  rejected_indices <- sarkar_tang_method2(regression$X, regression$Y, alpha = .05, eta = eta, multiplier = multiplier)
   num_rejections <- length(rejected_indices)
   num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
   num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))

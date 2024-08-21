@@ -18,7 +18,7 @@ library(tidyverse)
 This document runs the same simulations that were in the Sarkar-Tang-replication-specific-functions file but now with a corrected function for the variance parameter estimate, where the linear model does not try to calculate an intercept term. We also run the simulations using wrapper functions to save space. 
 
 ```{r}
-run_method1_simulation <- function(n, d, a, num_true_sigs, equicor = TRUE, num_iter = 300){
+run_method1_simulation <- function(n, d, a, num_true_sigs, multiplier = 1.9, num_iter = 300){
   # Sets up the regression problem with specified dimensions and number of true signals, all of which have
   # the same amplitude. 
   fdp_vec <- numeric(num_iter)
@@ -27,7 +27,7 @@ for (m in 1:num_iter){
   feature_indices <- 1:d
   regression <- get_regression_model(n = n, d = d, a = a, num_true_signals = num_true_sigs)
   true_nonzero_indices <- regression$nonzero_indices
-  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .05, equicor = equicor)
+  rejected_indices <- sarkar_tang_method1(regression$X, regression$Y, alpha = .05, multiplier = multiplier)
   num_rejections <- length(rejected_indices)
   num_correct_rejections <- length(intersect(rejected_indices, true_nonzero_indices))
   num_false_rejections <- length(intersect(feature_indices[-true_nonzero_indices], rejected_indices))
@@ -42,7 +42,8 @@ return(list(fdr = fdr, power = pwr))
 
 ```{r}
 run_sarkar_tang_method1_setting1_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
-                                               num_iter = 500){
+                                               num_iter = 500,
+                                               multiplier = 1.9){
 result_vec_power <- c()
 result_vec_fdr <- c()
 for (amp in a_vec){
@@ -50,7 +51,8 @@ for (amp in a_vec){
                                           d = 40,
                                           a = amp, 
                                           num_true_sigs = 8,
-                                          num_iter = num_iter)
+                                          num_iter = num_iter,
+                                   multiplier = multiplier)
   result_vec_power <- c(result_vec_power, result$power)
   result_vec_fdr <- c(result_vec_fdr, result$fdr)
 }
@@ -61,7 +63,8 @@ return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
 
 ```{r}
 run_sarkar_tang_method1_setting2_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
-                                               num_iter = 500){
+                                               num_iter = 500,
+                                               multiplier = 1.9){
 result_vec_power <- c()
 result_vec_fdr <- c()
 for (amp in a_vec){
@@ -69,7 +72,8 @@ for (amp in a_vec){
                                           d = 50,
                                           a = amp, 
                                           num_true_sigs = 10,
-                                          num_iter = num_iter)
+                                          num_iter = num_iter,
+                                   multiplier = multiplier)
   result_vec_power <- c(result_vec_power, result$power)
   result_vec_fdr <- c(result_vec_fdr, result$fdr)
 }
@@ -79,7 +83,8 @@ return(data.frame(a = a_vec, power = result_vec_power, fdr = result_vec_fdr))
 
 ```{r}
 run_sarkar_tang_method1_setting3_simulation <- function(a_vec = c(2, 4, 6, 8, 10), 
-                                               num_iter = 500){
+                                               num_iter = 500,
+                                               multiplier = 1.9){
 result_vec_power <- c()
 result_vec_fdr <- c()
 for (amp in a_vec){
@@ -87,7 +92,8 @@ for (amp in a_vec){
                                           d = 100,
                                           a = amp, 
                                           num_true_sigs = 20,
-                                          num_iter = num_iter)
+                                          num_iter = num_iter,
+                                   multiplier = multiplier)
   result_vec_power <- c(result_vec_power, result$power)
   result_vec_fdr <- c(result_vec_fdr, result$fdr)
 }

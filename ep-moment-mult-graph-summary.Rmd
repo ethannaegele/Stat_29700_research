@@ -1,0 +1,42 @@
+---
+title: "ep-moment-mult-graph-summary"
+author: "Ethan Naegele"
+date: "2024-08-17"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+combined_df_ep_moment_setting1_mult2 <- ep_moment_method_setting1_mult2_1.98 %>% 
+  full_join(ep_moment_method_setting1_mult2_1.96 %>% rename(power_1.96 = power, fdr_1.96 = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_setting1_mult2_1.94 %>% rename(power_1.94 = power, fdr_1.94 = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_setting1_mult2_1.92 %>% rename(power_1.92 = power, fdr_1.92 = fdr), by = 'a') %>% 
+  full_join(ep_moment_method_setting1_mult2_1.90 %>% rename(power_1.90 = power, fdr_1.90 = fdr), by = 'a')
+
+combined_df_ep_moment_setting1_mult2 <- combined_df_ep_moment_setting1_mult2 %>% 
+  rename(power_1.98 = power, fdr_1.98 = fdr)
+```
+
+```{r}
+long_df_ep_moment_setting1_mult2_power <- pivot_longer(combined_df_ep_moment_setting1_mult2, 
+                                                          cols = starts_with("power_"), 
+                                       names_to = "Multiplier", 
+                                       values_to = "Power")
+
+```
+
+```{r}
+library(RColorBrewer)
+color_palette <- colorRampPalette(brewer.pal(5, "YlOrRd"))(5)
+power_plot_summary_ep_moment_setting1_mult2 <- ggplot(long_df_ep_moment_setting1_mult2_power, aes(x = a, y = Power, color = Multiplier)) +
+  geom_line() +
+  geom_point() +
+  scale_color_manual(values = color_palette) +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Methods - Setting 1 (n = 200, d = 40, k = 8)", x = "Signal Strength - Amplitude", y = "Simulated Power") 
+print(power_plot_summary_ep_moment_setting1_mult2)
+ggsave(filename = 'power_plot_summary_ep_moment_setting1_mult2.pdf', plot = power_plot_summary_ep_moment_setting1_mult2)
+```
