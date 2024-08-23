@@ -13,6 +13,16 @@ method_simulation <- function(method,
                                   random_true_signal_indices = TRUE,
                                   num_iter = 500, 
                                   ...){
+  # method (function) - the multiple testing method to be simulated
+  # n (integer) - number of rows in design matrix
+  # d (integer) - number of columns in design matrix
+  # a (numeric) - signal amplitude
+  # num_true_sigs - number of true (nonzero) signals in the setting
+  # alpha (numeric) - nominal FDR level
+  # type (char) - the type of design matrix, e.g. MCC, IID_Normal, X_AR
+  # random_true_signal_indices (logical) - whether the signal indices are placed at random or are just the first k indices
+  # num_iter (integer) - number of iterations to perform the simulation
+  # ... - additional arguments to be supplied to the method, e.g. multiplier, moment, dampen. See the methods file for additional function arguments
   # Sets up the regression problem with specified dimensions and number of true signals, all of which have
   # the same amplitude. 
   fdp_vec <- numeric(num_iter)
@@ -38,7 +48,7 @@ method_simulation <- function(method,
   return(list(fdr = fdr, power = pwr))
 }
 
-
+# Function for running a simulation on a method in a certain setting over a set of signal amplitudes and/or alpha levels.
 method_setting_simulation <- function(method, 
                                       type = 'MCC',
                                       n,
@@ -49,6 +59,18 @@ method_setting_simulation <- function(method,
                                       alpha = .05,
                                       num_iter = 500,
                                       ...){
+  # method (function) - the multiple testing method to be simulated
+  # n (integer) - number of rows in design matrix
+  # d (integer) - number of columns in design matrix
+  # a (vector[numeric]) - signal amplitudes
+  # num_true_sigs - number of true (nonzero) signals in the setting
+  # alpha (vector[numeric]) - nominal FDR levels
+  # type (char) - the type of design matrix, e.g. MCC, IID_Normal, X_AR
+  # random_true_signal_indices (logical) - whether the signal indices are placed at random or are just the first k indices
+  # num_iter (integer) - number of iterations to perform the simulation
+  # ... - additional arguments to be supplied to the method, e.g. multiplier, moment, dampen. See the methods file for additional function arguments
+  # Sets up the regression problem with specified dimensions and number of true signals, all of which have
+  # the same amplitude. 
 
   # Initialize result lists
   result_list <- list()
