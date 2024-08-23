@@ -5,31 +5,95 @@ library(TreeTools)
 
 
 set.seed(12)
-ep_moment_method_setting1_m2_v4 <- run_ep_moment_method_setting1_simulation(moment = 2)
+ep_moment_method_setting1_m2 <- method_setting_simulation(method = ep_moment_method, 
+                                                type = 'X_AR', 
+                                                n = 200, 
+                                                d = 40,
+                                                num_true_sigs = 8,
+                                                random_true_signal_indices = FALSE,
+                                                moment = 2)
 
 set.seed(12)
-ep_moment_method_setting1_m4_v4 <- run_ep_moment_method_setting1_simulation(moment = 4)
+ep_moment_method_setting1_m4 <- method_setting_simulation(method = ep_moment_method, 
+                                                             type = 'X_AR', 
+                                                             n = 200, 
+                                                             d = 40,
+                                                             num_true_sigs = 8,
+                                                             random_true_signal_indices = FALSE,
+                                                             moment = 4)
 
 set.seed(12)
-ep_moment_method_setting1_m6_v4 <- run_ep_moment_method_setting1_simulation(moment = 6)
+ep_moment_method_setting1_m6 <- method_setting_simulation(method = ep_moment_method, 
+                                                             type = 'X_AR', 
+                                                             n = 200, 
+                                                             d = 40,
+                                                             num_true_sigs = 8,
+                                                             random_true_signal_indices = FALSE,
+                                                             moment = 6)
 
 set.seed(12)
-ep_moment_method_setting1_m8_v4 <- run_ep_moment_method_setting1_simulation(moment = 8)
+ep_moment_method_setting1_m8 <- method_setting_simulation(method = ep_moment_method, 
+                                                             type = 'X_AR', 
+                                                             n = 200, 
+                                                             d = 40,
+                                                             num_true_sigs = 8,
+                                                             random_true_signal_indices = FALSE,
+                                                             moment = 8)
 
 set.seed(12)
-ep_moment_method_setting1_m10_v4 <- run_ep_moment_method_setting1_simulation(moment = 10)
+ep_moment_method_setting1_m10 <- method_setting_simulation(method = ep_moment_method, 
+                                                              type = 'X_AR', 
+                                                              n = 200, 
+                                                              d = 40,
+                                                              num_true_sigs = 8,
+                                                              random_true_signal_indices = FALSE,
+                                                              moment = 10)
 
 set.seed(12)
-ep_moment_method_setting1_m2_dmp_v4 <- run_ep_moment_method_setting1_simulation(moment = 2, dampen = TRUE)
+ep_moment_method_setting1_m2_dmp <- method_setting_simulation(method = ep_moment_method, 
+                                                                 type = 'X_AR', 
+                                                                 n = 200, 
+                                                                 d = 40,
+                                                                 num_true_sigs = 8,
+                                                                 random_true_signal_indices = FALSE,
+                                                                 moment = 2,
+                                                                 dampen = TRUE)
 
 set.seed(12)
-ep_moment_method_setting1_m4_dmp_v4 <- run_ep_moment_method_setting1_simulation(moment = 4, dampen = TRUE)
+ep_moment_method_setting1_m4_dmp <- method_setting_simulation(method = ep_moment_method, 
+                                                                 type = 'X_AR', 
+                                                                 n = 200, 
+                                                                 d = 40,
+                                                                 num_true_sigs = 8,
+                                                                 random_true_signal_indices = FALSE,
+                                                                 moment = 4,
+                                                                 dampen = TRUE)
 
 set.seed(12)
-ep_moment_method_setting1_m6_dmp_v4 <- run_ep_moment_method_setting1_simulation(moment = 6, dampen = TRUE)
+ep_moment_method_setting1_m6_dmp <- method_setting_simulation(method = ep_moment_method, 
+                                                                 type = 'X_AR', 
+                                                                 n = 200, 
+                                                                 d = 40,
+                                                                 num_true_sigs = 8,
+                                                                 random_true_signal_indices = FALSE,
+                                                                 moment = 6,
+                                                                 dampen = TRUE)
 
 set.seed(12)
-ep_moment_method_setting1_m8_dmp_v4 <- run_ep_moment_method_setting1_simulation(moment = 8, dampen = TRUE)
-
+ep_moment_method_setting1_m8_dmp <- method_setting_simulation(method = ep_moment_method, 
+                                                                 type = 'X_AR', 
+                                                                 n = 200, 
+                                                                 d = 40,
+                                                                 num_true_sigs = 8,
+                                                                 random_true_signal_indices = FALSE,
+                                                                 moment = 8,
+                                                                 dampen = TRUE)
 set.seed(12)
-ep_moment_method_setting1_m10_dmp_v4 <- run_ep_moment_method_setting1_simulation(moment = 10, dampen = TRUE)
+ep_moment_method_setting1_m10_dmp <- method_setting_simulation(method = ep_moment_method, 
+                                                                  type = 'X_AR', 
+                                                                  n = 200, 
+                                                                  d = 40,
+                                                                  num_true_sigs = 8,
+                                                                  random_true_signal_indices = FALSE,
+                                                                  moment = 10,
+                                                                  dampen = TRUE)

@@ -1,0 +1,173 @@
+---
+title: "ep-moment-vs-method1-known-sigma"
+author: "Ethan Naegele"
+date: "2024-08-17"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Setting 1
+
+```{r}
+combined_df_setting1_ep_moment_vs_method1 <- method1_setting1_sigma %>% 
+  full_join(ep_moment_method_sigma_setting1_m2 %>% rename(power_ep_moment_method = power, fdr_ep_moment_method = fdr), by = 'a')
+
+combined_df_setting1_ep_moment_vs_method1 <- combined_df_setting1_ep_moment_vs_method1 %>% 
+  rename(power_method1 = power, fdr_method1 = fdr)
+```
+
+
+
+```{r}
+long_df_power_setting1_ep_moment_vs_method1 <-  pivot_longer(combined_df_setting1_ep_moment_vs_method1, 
+                                                          cols = starts_with("power_"), 
+                                       names_to = "Method", 
+                                       values_to = "Power")
+```
+
+```{r}
+long_df_fdr_setting1_ep_moment_vs_method1 <-  pivot_longer(combined_df_setting1_ep_moment_vs_method1, 
+                                                          cols = starts_with("fdr_"), 
+                                       names_to = "Method", 
+                                       values_to = "FDR")
+```
+
+```{r}
+power_plot_summary_setting1_ep_moment_vs_method1 <- ggplot(long_df_power_setting1_ep_moment_vs_method1, aes(x = a, y = Power, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("power_method1" = "green", 
+                                'power_ep_moment_method' = 'red')) +
+  scale_shape_manual(values = c(4, 1)) +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Methods - Setting 1 (n = 200, d = 40, k = 8)", x = "Signal Strength - Amplitude", y = "Simulated Power") +
+  theme_minimal()
+print(power_plot_summary_setting1_ep_moment_vs_method1)
+ggsave(filename = 'power_plot_summary_setting1_ep_moment_vs_method1.pdf', plot = power_plot_summary_setting1_ep_moment_vs_method1)
+```
+
+```{r}
+fdr_plot_summary_setting1_ep_moment_vs_method1 <- ggplot(long_df_fdr_setting1_ep_moment_vs_method1, aes(x = a, y = FDR, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("fdr_method1" = "green", 
+                                'fdr_ep_moment_method' = 'red')) +
+  scale_shape_manual(values = c(4, 1)) +
+  scale_y_continuous(limits = c(0, .15)) + 
+  labs(title = "Simulated FDR Across Different Methods - Setting 1 (n = 200, d = 40, k = 8)", x = "Signal Strength - Amplitude", y = "Simulated FDR") +
+  theme_minimal()
+print(fdr_plot_summary_setting1_ep_moment_vs_method1)
+ggsave(filename = 'fdr_plot_summary_setting1_ep_moment_vs_method1.pdf', plot = fdr_plot_summary_setting1_ep_moment_vs_method1)
+```
+
+
+# Setting 2 
+
+```{r}
+combined_df_setting2_ep_moment_vs_method1 <- method1_setting2_sigma %>% 
+  full_join(ep_moment_method_sigma_setting2_m2 %>% rename(power_ep_moment_method = power, fdr_ep_moment_method = fdr), by = 'a')
+
+combined_df_setting2_ep_moment_vs_method1 <- combined_df_setting2_ep_moment_vs_method1 %>% 
+  rename(power_method1 = power, fdr_method1 = fdr)
+```
+
+
+
+```{r}
+long_df_power_setting2_ep_moment_vs_method1 <-  pivot_longer(combined_df_setting2_ep_moment_vs_method1, 
+                                                          cols = starts_with("power_"), 
+                                       names_to = "Method", 
+                                       values_to = "Power")
+```
+
+```{r}
+long_df_fdr_setting2_ep_moment_vs_method1 <-  pivot_longer(combined_df_setting2_ep_moment_vs_method1, 
+                                                          cols = starts_with("fdr_"), 
+                                       names_to = "Method", 
+                                       values_to = "FDR")
+```
+
+```{r}
+power_plot_summary_setting2_ep_moment_vs_method1 <- ggplot(long_df_power_setting2_ep_moment_vs_method1, aes(x = a, y = Power, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("power_method1" = "green", 
+                                'power_ep_moment_method' = 'red')) +
+  scale_shape_manual(values = c(4, 1)) +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Methods - Setting 2 (n = 500, d = 50, k = 10)", x = "Signal Strength - Amplitude", y = "Simulated Power") +
+  theme_minimal()
+print(power_plot_summary_setting2_ep_moment_vs_method1)
+ggsave(filename = 'power_plot_summary_setting2_ep_moment_vs_method1.pdf', plot = power_plot_summary_setting2_ep_moment_vs_method1)
+```
+
+```{r}
+fdr_plot_summary_setting2_ep_moment_vs_method1 <- ggplot(long_df_fdr_setting2_ep_moment_vs_method1, aes(x = a, y = FDR, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("fdr_method1" = "green", 
+                                'fdr_ep_moment_method' = 'red')) +
+  scale_shape_manual(values = c(4, 1)) +
+  scale_y_continuous(limits = c(0, .15)) + 
+  labs(title = "Simulated FDR Across Different Methods - Setting 1 (n = 200, d = 40, k = 8)", x = "Signal Strength - Amplitude", y = "Simulated FDR") +
+  theme_minimal()
+print(fdr_plot_summary_setting2_ep_moment_vs_method1)
+ggsave(filename = 'fdr_plot_summary_setting2_ep_moment_vs_method1.pdf', plot = fdr_plot_summary_setting2_ep_moment_vs_method1)
+```
+
+# Setting 3
+
+```{r}
+combined_df_setting3_ep_moment_vs_method1 <- method1_setting3_sigma %>% 
+  full_join(ep_moment_method_sigma_setting3_m2 %>% rename(power_ep_moment_method = power, fdr_ep_moment_method = fdr), by = 'a')
+
+combined_df_setting3_ep_moment_vs_method1 <- combined_df_setting3_ep_moment_vs_method1 %>% 
+  rename(power_method1 = power, fdr_method1 = fdr)
+```
+
+
+
+```{r}
+long_df_power_setting3_ep_moment_vs_method1 <-  pivot_longer(combined_df_setting3_ep_moment_vs_method1, 
+                                                          cols = starts_with("power_"), 
+                                       names_to = "Method", 
+                                       values_to = "Power")
+```
+
+```{r}
+long_df_fdr_setting3_ep_moment_vs_method1 <-  pivot_longer(combined_df_setting3_ep_moment_vs_method1, 
+                                                          cols = starts_with("fdr_"), 
+                                       names_to = "Method", 
+                                       values_to = "FDR")
+```
+
+```{r}
+power_plot_summary_setting3_ep_moment_vs_method1 <- ggplot(long_df_power_setting3_ep_moment_vs_method1, aes(x = a, y = Power, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("power_method1" = "green", 
+                                'power_ep_moment_method' = 'red')) +
+  scale_shape_manual(values = c(4, 1)) +
+  scale_y_continuous(limits = c(0, 1)) + 
+  labs(title = "Simulated Power Across Different Methods - Setting 3 (n = 1000, d = 100, k = 20)", x = "Signal Strength - Amplitude", y = "Simulated Power") +
+  theme_minimal()
+print(power_plot_summary_setting3_ep_moment_vs_method1)
+ggsave(filename = 'power_plot_summary_setting3_ep_moment_vs_method1.pdf', plot = power_plot_summary_setting3_ep_moment_vs_method1)
+```
+
+```{r}
+fdr_plot_summary_setting3_ep_moment_vs_method1 <- ggplot(long_df_fdr_setting3_ep_moment_vs_method1, aes(x = a, y = FDR, color = Method)) +
+  geom_line() +
+  geom_point(aes(shape = Method)) +
+  scale_color_manual(values = c("fdr_method1" = "green", 
+                                'fdr_ep_moment_method' = 'red')) +
+  scale_shape_manual(values = c(4, 1)) +
+  scale_y_continuous(limits = c(0, .15)) + 
+  labs(title = "Simulated FDR Across Different Methods - Setting 1 (n = 200, d = 40, k = 8)", x = "Signal Strength - Amplitude", y = "Simulated FDR") +
+  theme_minimal()
+print(fdr_plot_summary_setting3_ep_moment_vs_method1)
+ggsave('fdr_plot_summary_setting3_ep_moment_vs_method1.pdf', plot = fdr_plot_summary_setting3_ep_moment_vs_method1)
+```

@@ -12,20 +12,20 @@ knitr::opts_chunk$set(echo = TRUE)
 # MCC setting summary
 
 ```{r}
-combined_df_lfl_setting_mcc <- method1_lfl_setting_mcc_v4[5:8,] %>% 
-  full_join(method2_lfl_setting_mcc_v4[5:8,] %>% rename(power_method2 = power, fdr_method2 = fdr), by = 'alpha') %>% 
-  full_join(ep_moment_method_lfl_setting_mcc_v4[5:8,] %>% rename(power_ep_moment = power, fdr_ep_moment = fdr), by = 'alpha') %>% 
-  full_join(ep_moment_method_alternate_lfl_setting_mcc[5:8,] %>% rename(power_ep_moment_alternate = power, fdr_ep_moment_alternate = fdr), by = 'alpha') %>%
-  full_join(CKnockoff_lfl_setting_mcc_.5_pwr %>% rename(power_CKnockoff = power, fdr_CKnockoff = fdr), by = 'alpha') %>% 
-  full_join(dbh_lfl_setting_mcc[5:8,] %>% rename(power_dbh = power, fdr_dbh = fdr), by = 'alpha')
+combined_df_mcc <- method1_mcc[5:8,] %>% 
+  full_join(method2_mcc[5:8,] %>% rename(power_method2 = power, fdr_method2 = fdr), by = 'alpha') %>% 
+  full_join(ep_moment_method_mcc[5:8,] %>% rename(power_ep_moment = power, fdr_ep_moment = fdr), by = 'alpha') %>% 
+  full_join(ep_moment_method_alternate_mcc[5:8,] %>% rename(power_ep_moment_alternate = power, fdr_ep_moment_alternate = fdr), by = 'alpha') %>%
+  full_join(CKnockoff_mcc[5:8,] %>% rename(power_CKnockoff = power, fdr_CKnockoff = fdr), by = 'alpha') %>% 
+  full_join(dbh_mcc[5:8,] %>% rename(power_dbh = power, fdr_dbh = fdr), by = 'alpha')
 
-combined_df_lfl_setting_mcc <- combined_df_lfl_setting_mcc %>% 
+combined_df_mcc <- combined_df_mcc %>% 
   rename(power_method1 = power, fdr_method1 = fdr)
 ```
 
 
 ```{r}
-long_df_lfl_setting_mcc_power <- pivot_longer(combined_df_lfl_setting_mcc, 
+long_df_mcc_power <- pivot_longer(combined_df_mcc, 
                                                           cols = starts_with("power_"), 
                                        names_to = "Method", 
                                        values_to = "Power")
@@ -34,7 +34,7 @@ long_df_lfl_setting_mcc_power <- pivot_longer(combined_df_lfl_setting_mcc,
 
 
 ```{r}
-long_df_lfl_setting_mcc_fdr <- pivot_longer(combined_df_lfl_setting_mcc, 
+long_df_mcc_fdr <- pivot_longer(combined_df_mcc, 
                                                           cols = starts_with("fdr_"), 
                                        names_to = "Method", 
                                        values_to = "FDR")
@@ -42,7 +42,7 @@ long_df_lfl_setting_mcc_fdr <- pivot_longer(combined_df_lfl_setting_mcc,
 ```
 
 ```{r}
-power_plot_summary_lfl_setting_mcc <- ggplot(long_df_lfl_setting_mcc_power, aes(x = alpha, y = Power, color = Method)) +
+power_plot_summary_mcc <- ggplot(long_df_mcc_power, aes(x = alpha, y = Power, color = Method)) +
   geom_line() +
   geom_point(aes(shape = Method)) +
   scale_color_manual(values = c("power_method1" = "green", 
@@ -54,14 +54,14 @@ power_plot_summary_lfl_setting_mcc <- ggplot(long_df_lfl_setting_mcc_power, aes(
   scale_shape_manual(values = c(4, 1, 5, 2, 3, 10)) +
   scale_y_continuous(limits = c(0, 1)) + 
   scale_x_continuous(breaks = c(.01, .05, .10, .20)) +
-  labs(title = "Simulated Power Across Different Methods (n = 1000, d = 100, k = 10)", x = "Alpha", y = "Simulated Power") +
+  labs(title = "Simulated Power Across Different Methods - MCC (n = 1000, d = 100, k = 10)", x = "Alpha", y = "Simulated Power") +
   theme_minimal()
-print(power_plot_summary_lfl_setting_mcc)
-ggsave(filename = 'power_plot_summary_lfl_setting_mcc.pdf', plot = power_plot_summary_lfl_setting_mcc)
+print(power_plot_summary_mcc)
+ggsave(filename = 'power_plot_summary_mcc.pdf', plot = power_plot_summary_mcc)
 ```
 
 ```{r}
-fdr_plot_summary_lfl_setting_mcc <- ggplot(long_df_lfl_setting_mcc_fdr, aes(x = alpha, y = FDR, color = Method)) +
+fdr_plot_summary_mcc <- ggplot(long_df_mcc_fdr, aes(x = alpha, y = FDR, color = Method)) +
   geom_abline(slope = 1, intercept = 0, # Add the y = x line
               linetype = "dashed",      # Make the line dashed
               color = "blue") +
@@ -78,28 +78,28 @@ fdr_plot_summary_lfl_setting_mcc <- ggplot(long_df_lfl_setting_mcc_fdr, aes(x = 
   scale_x_continuous(breaks = c(.01, .05, .10, .20)) +
   labs(title = "Simulated FDR Across Different Methods - MCC (n = 1000, d = 100, k = 10)", x = "Alpha", y = "Simulated FDR") +
   theme_minimal()
-print(fdr_plot_summary_lfl_setting_mcc)
-ggsave(filename = 'fdr_plot_summary_lfl_setting_mcc.pdf', plot = fdr_plot_summary_lfl_setting_mcc)
+print(fdr_plot_summary_mcc)
+ggsave(filename = 'fdr_plot_summary_mcc.pdf', plot = fdr_plot_summary_mcc)
 ```
 
 
 # IID setting summary
 
 ```{r}
-combined_df_lfl_setting_iid <- method1_lfl_setting_iid_v4[5:8,] %>% 
-  full_join(method2_lfl_setting_iid_v4[5:8,] %>% rename(power_method2 = power, fdr_method2 = fdr), by = 'alpha') %>% 
-  full_join(ep_moment_method_lfl_setting_iid_v4[5:8,] %>% rename(power_ep_moment = power, fdr_ep_moment = fdr), by = 'alpha') %>% 
-  full_join(ep_moment_method_alternate_lfl_setting_iid[5:8,] %>% rename(power_ep_moment_alternate = power, fdr_ep_moment_alternate = fdr), by = 'alpha') %>%
-  full_join(CKnockoff_lfl_setting_iid[5:8,] %>% rename(power_CKnockoff = power, fdr_CKnockoff = fdr), by = 'alpha') %>% 
-  full_join(dbh_lfl_setting_iid[5:8,] %>% rename(power_dbh = power, fdr_dbh = fdr), by = 'alpha')
+combined_df_iid <- method1_iid[5:8,] %>% 
+  full_join(method2_iid[5:8,] %>% rename(power_method2 = power, fdr_method2 = fdr), by = 'alpha') %>% 
+  full_join(ep_moment_method_iid[5:8,] %>% rename(power_ep_moment = power, fdr_ep_moment = fdr), by = 'alpha') %>% 
+  full_join(ep_moment_method_alternate_iid[5:8,] %>% rename(power_ep_moment_alternate = power, fdr_ep_moment_alternate = fdr), by = 'alpha') %>%
+  full_join(CKnockoff_iid[5:8,] %>% rename(power_CKnockoff = power, fdr_CKnockoff = fdr), by = 'alpha') %>% 
+  full_join(dbh_iid[5:8,] %>% rename(power_dbh = power, fdr_dbh = fdr), by = 'alpha')
 
-combined_df_lfl_setting_iid <- combined_df_lfl_setting_iid %>% 
+combined_df_iid <- combined_df_iid %>% 
   rename(power_method1 = power, fdr_method1 = fdr)
 ```
 
 
 ```{r}
-long_df_lfl_setting_iid_power <- pivot_longer(combined_df_lfl_setting_iid, 
+long_df_iid_power <- pivot_longer(combined_df_iid, 
                                                           cols = starts_with("power_"), 
                                        names_to = "Method", 
                                        values_to = "Power")
@@ -108,7 +108,7 @@ long_df_lfl_setting_iid_power <- pivot_longer(combined_df_lfl_setting_iid,
 
 
 ```{r}
-long_df_lfl_setting_iid_fdr <- pivot_longer(combined_df_lfl_setting_iid, 
+long_df_iid_fdr <- pivot_longer(combined_df_iid, 
                                                           cols = starts_with("fdr_"), 
                                        names_to = "Method", 
                                        values_to = "FDR")
@@ -116,7 +116,7 @@ long_df_lfl_setting_iid_fdr <- pivot_longer(combined_df_lfl_setting_iid,
 ```
 
 ```{r}
-power_plot_summary_lfl_setting_iid <- ggplot(long_df_lfl_setting_iid_power, aes(x = alpha, y = Power, color = Method)) +
+power_plot_summary_iid <- ggplot(long_df_iid_power, aes(x = alpha, y = Power, color = Method)) +
   geom_line() +
   geom_point(aes(shape = Method)) +
   scale_color_manual(values = c("power_method1" = "green", 
@@ -130,12 +130,12 @@ power_plot_summary_lfl_setting_iid <- ggplot(long_df_lfl_setting_iid_power, aes(
   scale_x_continuous(breaks = c(.01, .05, .10, .20)) +
   labs(title = "Simulated Power Across Different Methods - IID Normal (n = 1000, d = 100, k = 10)", x = "Alpha", y = "Simulated Power") +
   theme_minimal()
-print(power_plot_summary_lfl_setting_iid)
-ggsave(filename = 'power_plot_summary_lfl_setting_iid.pdf', plot = power_plot_summary_lfl_setting_iid)
+print(power_plot_summary_iid)
+ggsave(filename = 'power_plot_summary_iid.pdf', plot = power_plot_summary_iid)
 ```
 
 ```{r}
-fdr_plot_summary_lfl_setting_iid <- ggplot(long_df_lfl_setting_iid_fdr, aes(x = alpha, y = FDR, color = Method)) +
+fdr_plot_summary_iid <- ggplot(long_df_iid_fdr, aes(x = alpha, y = FDR, color = Method)) +
   geom_abline(slope = 1, intercept = 0, # Add the y = x line
               linetype = "dashed",      # Make the line dashed
               color = "blue") +
@@ -152,6 +152,6 @@ fdr_plot_summary_lfl_setting_iid <- ggplot(long_df_lfl_setting_iid_fdr, aes(x = 
   scale_x_continuous(breaks = c(.01, .05, .10, .20)) +
   labs(title = "Simulated FDR Across Different Methods - IID Normal (n = 1000, d = 100, k = 10)", x = "Alpha", y = "Simulated FDR") +
   theme_minimal()
-print(fdr_plot_summary_lfl_setting_iid)
-ggsave(filename = "fdr_plot_summary_lfl_setting_iid.pdf", plot = fdr_plot_summary_lfl_setting_iid)
+print(fdr_plot_summary_iid)
+ggsave(filename = "fdr_plot_summary_iid.pdf", plot = fdr_plot_summary_iid)
 ```
