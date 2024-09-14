@@ -90,14 +90,15 @@ create_equicorrelated_mult <- function(X, multiplier=2) {
 # faster function for calculating norm of vector
 norm_vec <- function(x) sqrt(sum(x^2))
 
-# obtain the unbiased estimator of the variance parameter tau in the regression setting Y = N(X * beta, tau^2 I_n)
+
 get_variance_parameter_estimate <- function(X, Y){
+  # obtain the unbiased estimator of the variance parameter tau in the regression setting Y = N(X * beta, tau^2 I_n)
+  
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # Returns (numeric): variance parameter estimate
   n <- nrow(X)
   d <- ncol(X)
-  # Ensure Y is a vector and has appropriate length
-  #if (!is.vector(Y) || length(Y) != nrow(X)) {
-  # stop("Y must be a vector and match the number of rows in X")
-  # }
   
   # Convert X to a data frame
   df_X <- as.data.frame(X)
@@ -111,9 +112,14 @@ get_variance_parameter_estimate <- function(X, Y){
   return(sqrt(residuals_sum_sq / (n - d)))
 }
 
-# get the T_1  estimate provided at the beginning of section 2 of Sarkar and Tang's paper
-# SQRTM USES THE PRACMA VERSION HERE CURRENTLY
+
+
 get_T_1 <- function(X, Y, multiplier = 1.9){
+  # get the T_1 estimate provided at the beginning of section 2 of Sarkar and Tang's paper
+  
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # Returns (vector): T_1 from beginning of section 2
   sigma <- t(X) %*% X
   equi <- create_equicorrelated_mult(X, multiplier = multiplier) # TRYING TO USE THE MODIFIED FUNCTION FOR BETTER MATRIX CONDITION
   D <- equi$D # need to turn the output into a diagonal matrix
@@ -122,12 +128,18 @@ get_T_1 <- function(X, Y, multiplier = 1.9){
   beta_hat_1 <- solve(2 * sigma - D) %*% t(X + X_ko) %*% Y
   # tau hat estimated with the columnwise concatenation of X and knockoff X
   T_1 <- (1 / (get_variance_parameter_estimate(cbind(X, X_ko), Y) * sqrt(2))) *
-    sqrtm(diag(diag(solve(2 * sigma - D))))$Binv %*% beta_hat_1
+    sqrtm(diag(diag(solve(2 * sigma - D))))$Binv %*% beta_hat_1 # uses pracma library
   return(T_1)
 }
 
-# get the T_2 estimate from Sarkar and Tang's paper
+
 get_T_2 <- function(X, Y){
+  # get the T_2 estimate from Sarkar and Tang's paper
+  
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # Returns (vector[numeric]): T_2 estimate
+  
   D <- diag(create.solve_equi(t(X) %*% X)) # note: D calculated in slightly different ways for T1 and T2; simulations show power is slightly higher through this approach
   X_ko <- create.fixed(X, method = 'equi')$Xk
   beta_hat_2 <- solve(D) %*% t(X - X_ko) %*% Y
@@ -135,14 +147,18 @@ get_T_2 <- function(X, Y){
   return(T_2)
 }
 
-# generate a regression model with autoregressive design matrix X as described in Sarkar and Tang
+
 get_X_AR_regression_model <- function(n, d, a, num_true_signals, random_true_signal_indices = FALSE, sigma = 1){
-  # random_true_signal_indices selects which indices will be true signals randomly
-  # n = sample size, ie number of rows in the matrix
-  # d = number of features
-  # a = signal strength
-  # num_true_signals = number of nonzero beta coefficients
-  # Returns an X matrix, response Y, and the positions of the true signals, as according to the simulation setup described in the beginning of Section 3 of Sarkar and Tang
+  # generate a regression model with autoregressive design matrix X as described in Sarkar and Tang
+  
+  # n (integer) - sample size, ie number of rows in the matrix
+  # d (integer) - number of features
+  # a (numeric) - signal strength
+  # num_true_signals (integer) - number of nonzero beta coefficients
+  # random_true_signal_indices (logical) - selects which indices will be true signals randomly
+  # sigma (numeric) - true variance parameter of regression setting
+  # Returns (list): an X matrix, response Y, and the positions of the true signals, as according to the simulation setup described in the beginning of Section 3 of Sarkar and Tang
+  
   rho <- 0.5
   cor_matrix <- matrix(nrow = d, ncol = d)
   for (i in 1:d) {
@@ -264,6 +280,17 @@ gene_X <- function(X_type = "IID_Normal", n, p, X_seed = NULL){
 }
 
 get_regression_model <- function(type = 'MCC', n, d, a, num_true_signals, random_true_signal_indices = TRUE, sigma = 1){
+  # Produce a regression problem with design matrix of specified type and dimensions with control of true nulls
+  
+  # type (character) - the type of design matrix. Must be one of 'IID_Normal', 'Coef_AR' ,'X_AR', 'Homo_Block', 'MCC', 'MCC_Block', 'Sparse'.
+  # n (integer) - sample size, ie number of rows in the matrix
+  # d (integer) - number of features
+  # a (numeric) - signal strength
+  # num_true_signals (integer) - number of nonzero beta coefficients
+  # random_true_signal_indices (logical) - selects which indices will be true signals randomly
+  # sigma (numeric) - true variance parameter of regression setting
+  # Returns (list): an X matrix, response Y, and the positions of the true signals
+  
   if (type %in% c('IID_Normal', 'Coef_AR' ,'X_AR', 'Homo_Block', 'MCC', 'MCC_Block', 'Sparse')){
     if (type == 'X_AR'){
       return(get_X_AR_regression_model(n = n, d = d, a = a, 

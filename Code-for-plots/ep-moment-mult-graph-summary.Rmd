@@ -10,6 +10,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
+library(tidyverse)
+```
+
+```{r}
 combined_df_ep_moment_setting1_mult <- ep_moment_method_setting1_mult_1.98 %>% 
   full_join(ep_moment_method_setting1_mult_1.96 %>% rename(power_1.96 = power, fdr_1.96 = fdr), by = 'a') %>% 
   full_join(ep_moment_method_setting1_mult_1.94 %>% rename(power_1.94 = power, fdr_1.94 = fdr), by = 'a') %>% 

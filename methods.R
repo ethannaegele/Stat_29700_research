@@ -4,7 +4,17 @@ library(cknockoff)
 library(dbh)
 library(TreeTools)
 
+
 sarkar_tang_method1 <- function(X, Y, alpha = .05, multiplier = 1.9){
+  # Method 1 from Sarkar and Tang's paper
+  
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # alpha (numeric) - nominal FDR level
+  # multiplier (numeric) - the multiplier of the minimum eigenvalue of X^T X in the equicorrelated solution. This normally would be exactly 2, but
+  # due to the numerical requirements of the method in needing to invert 2X^T X - D, we must choose a multiplier less than 2.
+  # Returns (vector): vector of indices of the rejected hypotheses in the vector of p values
+  
   d <- ncol(X)
   nu <- nrow(X) - 2 * d # n - 2d assuming n > 2d
   T1 <- get_T_1(X, Y, multiplier = multiplier)
@@ -26,7 +36,18 @@ sarkar_tang_method1 <- function(X, Y, alpha = .05, multiplier = 1.9){
   
 }
 
+
 sarkar_tang_method2 <- function(X, Y, alpha = .05, eta = .7, multiplier = 1.9){
+  # Method 2 from Sarkar and Tang's paper
+  
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # alpha (numeric) - nominal FDR level
+  # eta (numeric) - cutoff above which p values will be considered null in the estimate of the proportion of nulls
+  # multiplier (numeric) - the multiplier of the minimum eigenvalue of X^T X in the equicorrelated solution. This normally would be exactly 2, but
+  # due to the numerical requirements of the method in needing to invert 2X^T X - D, we must choose a multiplier less than 2.
+  # Returns (vector): vector of indices of the rejected hypotheses in the vector of p values
+  
   d <- ncol(X)
   nu <- nrow(X) - 2 * d # n - 2d assuming n > 2d
   T1 <- get_T_1(X, Y, multiplier = multiplier)
@@ -49,7 +70,20 @@ sarkar_tang_method2 <- function(X, Y, alpha = .05, eta = .7, multiplier = 1.9){
   
 }
 
+
 sarkar_tang_method1_sigma <- function(X, Y, alpha = .05, sigma = 1, multiplier = 1.9){
+  # Method 1 from Sarkar and Tang's paper when variance is known instead of estimated and the normal distribution
+  # is used to obtain p values
+  
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # alpha (numeric) - nominal FDR level
+  # sigma (numeric) - true variance parameter of regression setting
+  # multiplier (numeric) - the multiplier of the minimum eigenvalue of X^T X in the equicorrelated solution. This normally would be exactly 2, but
+  # due to the numerical requirements of the method in needing to invert 2X^T X - D, we must choose a multiplier less than 2.
+  # Returns (vector): vector of indices of the rejected hypotheses in the vector of p values
+  
+  
   # In this setting, sigma is known
   
   d <- ncol(X)
@@ -86,7 +120,14 @@ sarkar_tang_method1_sigma <- function(X, Y, alpha = .05, sigma = 1, multiplier =
   
 }
 
+
 knockoff_procedure <- function(X, Y, alpha = .05, ko_method = 'equi'){
+  # Knockoff+ from Barber and Candes (2015)
+  
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # alpha (numeric) - nominal FDR level
+  # Returns (vector): vector of indices of the rejected hypotheses in the vector of p values
   return(knockoff.filter(X, 
                          as.vector(Y), 
                          knockoffs = function(Z) create.fixed(Z, method = ko_method), 
@@ -96,7 +137,15 @@ knockoff_procedure <- function(X, Y, alpha = .05, ko_method = 'equi'){
   
 }
 
+
 independent_BH <- function(X, Y, alpha = .05){
+  # BH only using the p values obtained from T2
+  
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # alpha (numeric) - nominal FDR level
+  # Returns (vector): vector of indices of the rejected hypotheses in the vector of p values
+  
   nu <- nrow(X) - 2 * ncol(X)
   T2 <- get_T_2(X, Y)
   P <- pf(T2^2, 1, nu, lower.tail = FALSE)
@@ -107,7 +156,18 @@ independent_BH <- function(X, Y, alpha = .05){
 
 
 ep_moment_method_sigma <- function(X, Y, alpha = .05, sigma = 1, moment = 2, dampen = FALSE, multiplier = 1.9){
-  # In this setting, sigma is known
+  # Helper function for the ep moment method in the case when sigma is known
+  
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # alpha (numeric) - nominal FDR level
+  # sigma (numeric) - true variance parameter of regression setting
+  # moment (numeric) - which moment of beta / sigma_hat should we use in the calculation of e values? Must be positive even integer
+  # dampen (logical) - if true, the e values will be dampened using the formula E' = 1/2 + (1/2) E
+  # multiplier (numeric) - the multiplier of the minimum eigenvalue of X^T X in the equicorrelated solution. This normally would be exactly 2, but
+  # due to the numerical requirements of the method in needing to invert 2X^T X - D, we must choose a multiplier less than 2.
+  # Returns (vector): vector of indices of the rejected hypotheses in the vector of p values
+  
   # check that moment is an even integer
   if (!is.numeric(moment) | moment %% 2 != 0 | moment <= 0) {
     stop("Moment must be a positive even integer.")
@@ -141,11 +201,23 @@ ep_moment_method_sigma <- function(X, Y, alpha = .05, sigma = 1, moment = 2, dam
   
 }
 
-# This function is the primary approach to the moment method, which uses the F distribution, and uses 
-# valid p values and e values. The p values are not independent, but since the p values are approximately equal to 
-# p values one would get from the known sigma case, they are "approximately independent" 
-# and empirically, the method controls the FDR in the cases I have examined.
+
 ep_moment_method <- function(X, Y, alpha = .05, moment = 2, sigma = NULL, dampen = FALSE, multiplier = 1.9){
+  # This function is the primary approach to the moment method, which uses the F distribution, and uses 
+  # valid p values and e values. The p values are not independent, but since the p values are approximately equal to 
+  # p values one would get from the known sigma case, they are "approximately independent" 
+  # and empirically, the method controls the FDR if n is large enough
+  
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # alpha (numeric) - nominal FDR level
+  # moment (numeric) - which moment of beta / sigma_hat should we use in the calculation of e values? Must be positive even integer
+  # dampen (logical) - if true, the e values will be dampened using the formula E' = 1/2 + (1/2) E
+  # multiplier (numeric) - the multiplier of the minimum eigenvalue of X^T X in the equicorrelated solution. This normally would be exactly 2, but
+  # due to the numerical requirements of the method in needing to invert 2X^T X - D, we must choose a multiplier less than 2.
+  # Returns (vector): vector of indices of the rejected hypotheses in the vector of p values
+  
+  
   # check that moment is an even integer
   if (!is.numeric(moment) | moment %% 2 != 0 | moment <= 0) {
     stop("Moment must be a positive even integer.")
@@ -164,7 +236,7 @@ ep_moment_method <- function(X, Y, alpha = .05, moment = 2, sigma = NULL, dampen
     
     
     sigma_mat <- t(X) %*% X
-    equi <- create_equicorrelated_mult(X, multiplier = multiplier) # USE THE MODIFIED FUNCTION FOR BETTER MATRIX CONDITION
+    equi <- create_equicorrelated_mult(X, multiplier = multiplier) # USES THE MODIFIED FUNCTION FOR BETTER MATRIX CONDITION
     D <- equi$D
     X_ko <- equi$Xk
     two_sigma_minus_D_inv <- solve(2 * sigma_mat - D)
@@ -190,6 +262,7 @@ ep_moment_method <- function(X, Y, alpha = .05, moment = 2, sigma = NULL, dampen
     stop("Variance parameter sigma must be positive.")
   }
   else{
+    # if sigma is known
     rejected_indices <- ep_moment_method_sigma(X, Y, 
                                                   alpha = alpha, 
                                                   sigma = sigma, 
@@ -203,9 +276,19 @@ ep_moment_method <- function(X, Y, alpha = .05, moment = 2, sigma = NULL, dampen
 
 
 ep_moment_method_alternate <- function(X, Y, alpha = .05, moment = 2, dampen = FALSE, multiplier = 1.9){
-  # this function is an attempt at an alternate approach to the moment method, where
+  # This function is an alternate approach to the moment method, where
   # we instead estimate sigma with sigma_hat and use the method for when sigma is known, assuming that
   # sigma_hat is equal to sigma.
+  
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # alpha (numeric) - nominal FDR level
+  # moment (numeric) - which moment of beta / sigma_hat should we use in the calculation of e values? Must be positive even integer
+  # dampen (logical) - if true, the e values will be dampened using the formula E' = 1/2 + (1/2) E
+  # multiplier (numeric) - the multiplier of the minimum eigenvalue of X^T X in the equicorrelated solution. This normally would be exactly 2, but
+  # due to the numerical requirements of the method in needing to invert 2X^T X - D, we must choose a multiplier less than 2.
+  # Returns (vector): vector of indices of the rejected hypotheses in the vector of p values
+  
   X_ko <-  create_equicorrelated_mult(X, multiplier = multiplier)$Xk
   sigma_hat <- get_variance_parameter_estimate(cbind(X, X_ko), Y)
   rejected_indices <- ep_moment_method_sigma(X, Y, 
@@ -218,8 +301,11 @@ ep_moment_method_alternate <- function(X, Y, alpha = .05, moment = 2, dampen = F
 }
 
 ep_BH <- function(p_values, e_values, alpha = .05){
-  # p_values is a vector of p values
-  # e_values is a vector of e values
+  # ep-BH from Ignatiadis, Wang, and Ramdas (2024)
+  
+  # p_values - vector of p values
+  # e_values - vector of e values
+  # Returns (vector): vector of indices of the rejected hypotheses in the vector of p values
   # p_values and e_values must be of the same length.
   # Weights each p value by its corresponding e value and then runs BH on the weighted p values at level alpha.
   Q <- pmin(p_values / e_values, 1)
@@ -228,8 +314,17 @@ ep_BH <- function(p_values, e_values, alpha = .05){
   return(rejected_indices)
 }
 
-# making an ep-BH function with arbitrary cutoff, to test the effect of cutoffs better
+
 ep_sarkar_tang_method1_cutoff <- function(X, Y, alpha = .05, cutoff = .2, multiplier = 1.9){
+  # ep-BH function with arbitrary cutoff, to test the effect of cutoffs
+  
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # alpha (numeric) - nominal FDR level
+  # cutoff (numeric) - the cutoff below which P_t1 values must be or else the P_t1, P_t2 pair will be discarded, as per the Sarkar/Tang method
+  # multiplier (numeric) - the multiplier of the minimum eigenvalue of X^T X in the equicorrelated solution. This normally would be exactly 2, but
+  # due to the numerical requirements of the method in needing to invert 2X^T X - D, we must choose a multiplier less than 2.
+  # Returns (vector): vector of indices of the rejected hypotheses in the vector of p values
   d <- ncol(X)
   nu <- nrow(X) - 2 * d # n - 2d assuming n > 2d
   T1 <- get_T_1(X, Y, multiplier = multiplier)
@@ -241,13 +336,26 @@ ep_sarkar_tang_method1_cutoff <- function(X, Y, alpha = .05, cutoff = .2, multip
   return(rejected_indices)
 }
 
+
 bh <- function(p_values, alpha = .05){
+  # base Benjamini-Hochberg
+  
+  # p_values (vector[numeric]) - vector of p_values
+  # alpha (numeric) - nominal FDR level
+  # Returns: vector of indices of the rejected hypotheses in the vector of p values
   Q_BH <- p.adjust(p_values, method = 'BH')
   rejected_indices <- which(Q_BH <= alpha)
   return(rejected_indices)
 }
 
+
 bh_regression <- function(X, Y, alpha = .05){
+  # BH for the linear regression setting specifically
+  
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # alpha (numeric) - nominal FDR level
+  # Returns (vector): vector of indices of the rejected hypotheses in the vector of p values
   sigma_hat <- get_variance_parameter_estimate(X, Y)
   model <- lm(Y ~ 0 + ., data=as.data.frame(X))
   beta_hat <- coef(model)
@@ -260,6 +368,10 @@ bh_regression <- function(X, Y, alpha = .05){
 }
 
 cknockoff_procedure <- function(X, Y, alpha = .05){
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # alpha (numeric) - nominal FDR level
+  # Returns (vector): vector of indices of the rejected hypotheses in the vector of p values
   cknockoff(X, 
             Y,
             intercept = FALSE,
@@ -268,6 +380,10 @@ cknockoff_procedure <- function(X, Y, alpha = .05){
 
 
 dbh_procedure <- function(X, Y, alpha = .05){
+  # X (matrix) - design matrix
+  # Y (vector[numeric]) - response vector
+  # alpha (numeric) - nominal FDR level
+  # Returns (vector): vector of indices of the rejected hypotheses in the vector of p values
   dBH_lm(Y, 
          X, 
          intercept = FALSE, 
