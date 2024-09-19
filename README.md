@@ -1,14 +1,20 @@
 Dependencies:
 
 library(knockoff)
+
 library(pracma)
+
 library(tidyverse)
+
 library(cknockoff)
+
 library(dbh)
+
 library(TreeTools)
 
 
 Install dbh from github at: https://github.com/lihualei71/dbh
+
 Install cknockoff from github at: https://github.com/yixiangLuo/cknockoff
 
 To use the simulation code in this repository:
